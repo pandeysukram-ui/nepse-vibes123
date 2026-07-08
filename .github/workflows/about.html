@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEPSE QML Dashboard v2 — Trade With Vibes</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#070b12;--bg2:#0d1520;--bg3:#111c2e;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#c8d8e8;--muted:#6a7f95;--mono:'Share Tech Mono',monospace;--head:'Chakra Petch',sans-serif;--q:#7c6af0;--m:#1ab87a;--l:#e8a030;--bull:#2ecc71;--bear:#e74c3c;--neutral:#f0c040;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--head);min-height:100vh;}
+input,select{font-family:var(--mono);background:var(--bg3);border:1px solid var(--border2);color:#fff;border-radius:3px;padding:4px 8px;font-size:11px;outline:none;width:100%;}
+input:focus,select:focus{border-color:var(--q);box-shadow:0 0 0 2px rgba(124,106,240,0.15);}
+select option{background:var(--bg2);}
+button{font-family:var(--head);cursor:pointer;border:none;border-radius:3px;letter-spacing:1px;font-size:10px;font-weight:600;padding:7px 14px;transition:all .15s;}
+.header{background:linear-gradient(90deg,rgba(124,106,240,0.14) 0%,transparent 60%);border-bottom:1px solid var(--border2);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--q);box-shadow:0 0 8px var(--q);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.brand-name{font-size:13px;font-weight:700;letter-spacing:3px;color:#fff;text-transform:uppercase;}
+.brand-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px;}
+.header-price{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px;}
+.header-chg{font-family:var(--mono);font-size:11px;}
+.tabs{display:flex;border-bottom:1px solid var(--border2);background:var(--bg2);padding:0 24px;}
+.tab{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:11px 18px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:#fff;border-bottom-color:var(--q);}
+.tab-panel{display:none;padding:18px 22px;}
+.tab-panel.active{display:block;}
+.export-bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;padding:9px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;flex-wrap:wrap;}
+.export-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-right:2px;}
+.btn-csv{background:rgba(26,184,122,0.15);color:var(--m);border:1px solid rgba(26,184,122,0.3);}
+.btn-csv:hover{background:rgba(26,184,122,0.28);}
+.btn-xlsx{background:rgba(124,106,240,0.15);color:var(--q);border:1px solid rgba(124,106,240,0.3);}
+.btn-xlsx:hover{background:rgba(124,106,240,0.28);}
+.btn-html{background:rgba(232,160,48,0.12);color:var(--l);border:1px solid rgba(232,160,48,0.28);}
+.btn-html:hover{background:rgba(232,160,48,0.22);}
+.btn-print{background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border2);}
+.btn-print:hover{background:rgba(255,255,255,0.1);}
+.btn-apply{background:var(--q);color:#fff;margin-left:auto;}
+.btn-apply:hover{background:#6b5de0;}
+.btn-add{background:rgba(26,184,122,0.15);color:var(--m);border:1px solid rgba(26,184,122,0.3);}
+.btn-del{background:rgba(231,76,60,0.12);color:var(--bear);border:1px solid rgba(231,76,60,0.25);font-size:9px;padding:3px 8px;border-radius:2px;}
+.btn-del:hover{background:rgba(231,76,60,0.25);}
+.ohlv-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;}
+.ohlv-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;position:relative;overflow:hidden;}
+.ohlv-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.ohlv-card.o::before{background:var(--muted);}
+.ohlv-card.h::before{background:var(--bull);}
+.ohlv-card.lo::before{background:var(--bear);}
+.ohlv-card.c::before{background:var(--q);}
+.ohlv-card.v::before{background:var(--l);}
+.ohlv-card.d::before{background:var(--neutral);}
+.ohlv-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.ohlv-val{font-family:var(--mono);font-size:17px;font-weight:700;color:#fff;}
+.ohlv-val.bear{color:var(--bear);}.ohlv-val.bull{color:var(--bull);}.ohlv-val.qc{color:var(--q);}.ohlv-val.neut{color:var(--neutral);}
+.two-col{display:grid;grid-template-columns:1fr 310px;gap:14px;}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.panel-head{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#fff;}
+.panel-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,0.05);color:var(--muted);}
+.qml-table{width:100%;border-collapse:collapse;}
+.qml-table th{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.qml-table td{padding:6px 10px;font-family:var(--mono);font-size:11px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.qml-table tr:hover td{background:rgba(255,255,255,0.018);}
+.tier-q{color:var(--q);font-weight:700;}.tier-m{color:var(--m);font-weight:700;}.tier-l{color:var(--l);font-weight:700;}
+.above{color:var(--bull);}.below{color:var(--bear);}
+.conf-badge{font-size:8px;letter-spacing:1px;padding:2px 6px;border-radius:2px;font-family:var(--mono);}
+.conf-hi{background:rgba(124,106,240,0.18);color:var(--q);border:1px solid rgba(124,106,240,0.3);}
+.conf-md{background:rgba(26,184,122,0.12);color:var(--m);border:1px solid rgba(26,184,122,0.25);}
+.conf-lo{background:rgba(232,160,48,0.1);color:var(--l);border:1px solid rgba(232,160,48,0.22);}
+.cur-row td{background:rgba(255,255,255,0.04)!important;border-top:1px solid rgba(232,160,48,0.3)!important;border-bottom:1px solid rgba(232,160,48,0.3)!important;}
+.price-map-wrap{padding:13px;}
+.pmap-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:9px;text-transform:uppercase;}
+.pbar{position:relative;background:var(--bg3);border:1px solid var(--border);border-radius:4px;height:340px;width:100%;}
+.bar-level{position:absolute;left:0;right:0;height:1px;display:flex;align-items:center;}
+.bar-line{flex:1;height:1px;}
+.bar-tag{font-family:var(--mono);font-size:8px;padding:0 5px;white-space:nowrap;background:var(--bg3);}
+.bar-price{font-family:var(--mono);font-size:8px;padding:0 6px 0 3px;white-space:nowrap;background:var(--bg3);}
+.cur-marker{position:absolute;left:0;right:0;height:2px;background:#fff;z-index:10;}
+.cur-tag{position:absolute;right:0;background:#fff;color:#000;font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 5px;border-radius:2px;transform:translateY(-50%);}
+.czone{position:absolute;left:0;right:0;border-radius:2px;}
+.ind-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+.ind-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:11px 12px;}
+.ind-name{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.ind-val{font-family:var(--mono);font-size:18px;font-weight:700;color:#fff;}
+.ind-sig{font-size:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+.sig-bull{color:var(--bull);}.sig-bear{color:var(--bear);}.sig-neut{color:var(--neutral);}
+.ind-bar-bg{height:3px;background:var(--bg3);border-radius:2px;margin-top:7px;}
+.ind-bar-fill{height:100%;border-radius:2px;}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.setup-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:13px 15px;}
+.setup-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.setup-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.setup-row:last-child{border-bottom:none;}
+.setup-key{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.setup-val{font-family:var(--mono);font-size:10px;color:#fff;font-weight:600;}
+.setup-val.bear{color:var(--bear);}.setup-val.bull{color:var(--bull);}.setup-val.neut{color:var(--neutral);}
+.bias-rows{display:flex;flex-direction:column;gap:8px;}
+.bias-row{display:flex;align-items:center;gap:10px;}
+.bias-tier{font-family:var(--mono);font-size:9px;width:32px;font-weight:700;}
+.bias-bg{flex:1;height:6px;background:var(--bg3);border-radius:3px;position:relative;}
+.bias-fill{height:100%;border-radius:3px;position:absolute;top:0;}
+.bias-center{position:absolute;top:-4px;left:50%;width:1px;height:14px;background:var(--border2);}
+.bias-lbl{font-family:var(--mono);font-size:9px;width:56px;text-align:right;}
+.trade-plan{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--q);border-radius:6px;padding:14px 17px;}
+.trade-plan-title{font-size:9px;font-weight:700;letter-spacing:3px;color:var(--q);text-transform:uppercase;margin-bottom:12px;}
+.tp-row{display:flex;gap:12px;flex-wrap:wrap;}
+.tp-block{flex:1;min-width:90px;}
+.tp-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.tp-price{font-family:var(--mono);font-size:14px;font-weight:700;}
+.tp-price.entry{color:var(--l);}.tp-price.sl{color:var(--bear);}.tp-price.tp1{color:var(--m);}.tp-price.tp2{color:var(--q);}
+.tp-note{font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px;}
+.tp-div{width:1px;background:var(--border);}
+.rr-badge{margin-top:12px;display:inline-block;background:rgba(124,106,240,0.13);border:1px solid rgba(124,106,240,0.28);border-radius:3px;font-family:var(--mono);font-size:9px;color:var(--q);padding:4px 12px;letter-spacing:1.5px;}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.edit-section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:15px;}
+.edit-section-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.field-row{display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:8px;}
+.field-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;}
+.field-row.full{grid-template-columns:1fr;}
+.levels-edit-table{width:100%;border-collapse:collapse;}
+.levels-edit-table th{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;}
+.levels-edit-table td{padding:4px 4px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.levels-edit-table input,.levels-edit-table select{padding:3px 6px;font-size:10px;}
+.sec-label{font-family:var(--mono);font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;padding:0 2px 6px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--bg2);border:1px solid var(--border2);border-left:3px solid var(--m);color:#fff;font-family:var(--mono);font-size:11px;padding:9px 16px;border-radius:4px;z-index:999;transform:translateY(60px);opacity:0;transition:all .3s ease;}
+.toast.show{transform:translateY(0);opacity:1;}
+.footer{border-top:1px solid var(--border);padding:9px 22px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+.footer-link{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px;text-decoration:none;}
+.footer-link:hover{color:var(--q);}
+.footer-time{font-family:var(--mono);font-size:9px;color:var(--muted);}
+@media print{.tabs,.export-bar,.tab-panel:not(#tab-dashboard){display:none!important;}#tab-dashboard{display:block!important;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <div>
+      <div class="brand-name">Trade With Vibes</div>
+      <div class="brand-sub">QML TRADING SETUP DASHBOARD v2.0 · NEPSE INDEX · DAILY</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <select id="scrip-select" onchange="loadPreset(this.value)" style="width:200px;font-size:11px;padding:7px 10px;">
+      <optgroup label="── Main Index ──">
+        <option value="NEPSE">NEPSE Index</option>
+      </optgroup>
+      <optgroup label="── 13 Sub-Indices ──">
+        <option value="BANKING">Banking</option>
+        <option value="DEVBANK">Development Bank</option>
+        <option value="FINANCE">Finance</option>
+        <option value="MICROFINANCE">Microfinance</option>
+        <option value="HYDROPOWER">HydroPower</option>
+        <option value="NONLIFEINSU">Non-Life Insurance</option>
+        <option value="LIFEINSU">Life Insurance</option>
+        <option value="HOTELS">Hotels &amp; Tourism</option>
+        <option value="TRADING">Trading</option>
+        <option value="MANUFACTURING">Manufacturing</option>
+        <option value="INVESTMENT">Investment</option>
+        <option value="OTHERS">Others</option>
+        <option value="MUTUALFUND">Mutual Fund</option>
+      </optgroup>
+      <optgroup label="── Individual Scrips ──">
+        <option value="EBL">EBL (Banking)</option>
+        <option value="NABIL">NABIL (Banking)</option>
+      </optgroup>
+    </select>
+    <div>
+      <div class="header-price" id="hdr-price">NEPSE 2,607.37</div>
+      <div class="header-chg bear" id="hdr-chg">&#9660; -1.66 (-0.06%) &middot; Vol 3.498B &middot; Thu Dec 11, 2025</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('dashboard')">&#9670; Dashboard</div>
+  <div class="tab" onclick="switchTab('signal')">&#9889; Signal Engine</div>
+  <div class="tab" onclick="switchTab('journal')">&#128214; Journal</div>
+  <div class="tab" onclick="switchTab('planner')">&#128198; Planner</div>
+  <div class="tab" onclick="switchTab('eod')">&#11015; EOD Import</div>
+  <div class="tab" onclick="switchTab('weekly')">&#9745; Weekly</div>
+  <div class="tab" onclick="switchTab('editor')">&#9998; Edit</div>
+  <div class="tab" onclick="switchTab('levels')">&#8801; Levels</div>
+</div>
+
+<!-- TAB 1: DASHBOARD -->
+<div class="tab-panel active" id="tab-dashboard">
+  <div class="export-bar">
+    <span class="export-label">Export &#9658;</span>
+    <button class="btn-csv" onclick="exportCSV()">&#11015; CSV</button>
+    <button class="btn-xlsx" onclick="exportXLSX()">&#11015; Excel (XLSX)</button>
+    <button class="btn-html" onclick="exportHTML()">&#11015; HTML Snapshot</button>
+    <button class="btn-print" onclick="window.print()">&#128424; Print</button>
+  </div>
+
+  <div class="ohlv-row">
+    <div class="ohlv-card o"><div class="ohlv-label">Open</div><div class="ohlv-val" id="d-open">2,608.10</div></div>
+    <div class="ohlv-card h"><div class="ohlv-label">High</div><div class="ohlv-val bull" id="d-high">2,611.99</div></div>
+    <div class="ohlv-card lo"><div class="ohlv-label">Low</div><div class="ohlv-val bear" id="d-low">2,601.50</div></div>
+    <div class="ohlv-card c"><div class="ohlv-label">Close</div><div class="ohlv-val qc" id="d-close">2,607.37</div></div>
+    <div class="ohlv-card v"><div class="ohlv-label">Net Volume</div><div class="ohlv-val bear" id="d-vol">-3.498B</div></div>
+    <div class="ohlv-card d"><div class="ohlv-label">Date</div><div class="ohlv-val" style="font-size:11px;" id="d-date">11-Dec-2025</div></div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:15px;">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">QML Level Map</span>
+        <span class="panel-badge" id="badge-date">NEPSE &middot; DAILY &middot; 11-Dec-2025</span>
+      </div>
+      <table class="qml-table">
+        <thead><tr><th>Tier</th><th>Type</th><th>Level</th><th>Dist%</th><th>Confluence</th><th>Note</th></tr></thead>
+        <tbody id="qml-tbody"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Price Map</span>
+        <span class="panel-badge">Q &middot; M &middot; L</span>
+      </div>
+      <div class="price-map-wrap">
+        <div class="pmap-label" id="pmap-range">Range loading&#8230;</div>
+        <div class="pbar" id="pricebar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label" style="margin-bottom:11px;">&#9672; Indicator Snapshot</div>
+  <div class="ind-grid" style="margin-bottom:15px;">
+    <div class="ind-card"><div class="ind-name">RSI 14</div><div class="ind-val" id="i-rsi">51.25</div><div class="ind-sig sig-neut" id="i-rsi-sig">Neutral</div><div class="ind-bar-bg"><div class="ind-bar-fill" id="i-rsi-bar" style="width:51%;background:var(--neutral);"></div></div></div>
+    <div class="ind-card"><div class="ind-name">WMA 9 (RSI)</div><div class="ind-val" id="i-wma">49.12</div><div class="ind-sig sig-bear" id="i-wma-sig">Weak</div><div class="ind-bar-bg"><div class="ind-bar-fill" id="i-wma-bar" style="width:49%;background:var(--bear);"></div></div></div>
+    <div class="ind-card"><div class="ind-name">DPO 21</div><div class="ind-val" id="i-dpo" style="color:var(--m);">30.59</div><div class="ind-sig sig-bull" id="i-dpo-sig">Cycle Up</div><div class="ind-bar-bg"><div class="ind-bar-fill" id="i-dpo-bar" style="width:62%;background:var(--m);"></div></div></div>
+    <div class="ind-card"><div class="ind-name">SEB 21</div><div class="ind-val" id="i-seb" style="color:var(--muted);">2,649</div><div class="ind-sig sig-bear" id="i-seb-sig">Below Band</div><div class="ind-bar-bg"><div class="ind-bar-fill" id="i-seb-bar" style="width:30%;background:var(--bear);"></div></div></div>
+    <div class="ind-card"><div class="ind-name">Net Vol Bias</div><div class="ind-val bear" id="i-nvol">-3.498B</div><div class="ind-sig sig-bear" id="i-nvol-sig">Distribution</div><div class="ind-bar-bg"><div class="ind-bar-fill" id="i-nvol-bar" style="width:20%;background:var(--bear);"></div></div></div>
+  </div>
+
+  <div class="sec-label" style="margin-bottom:11px;">&#9672; QML Setup Analysis</div>
+  <div class="setup-grid" style="margin-bottom:15px;">
+    <div class="setup-card">
+      <div class="setup-title">Structure Signals</div>
+      <div class="setup-row"><span class="setup-key">Q Structure</span><span class="setup-val bear" id="sig-q">Downtrend from 3,028</span></div>
+      <div class="setup-row"><span class="setup-key">M Structure</span><span class="setup-val bear" id="sig-m">Below all M levels</span></div>
+      <div class="setup-row"><span class="setup-key">L Structure</span><span class="setup-val neut" id="sig-l">Inside L range</span></div>
+      <div class="setup-row"><span class="setup-key">Price vs SEB</span><span class="setup-val bear" id="sig-seb">Below 2,649 &middot; Bearish</span></div>
+      <div class="setup-row"><span class="setup-key">Price vs DC-89</span><span class="setup-val bear" id="sig-dc">Below midline</span></div>
+      <div class="setup-row"><span class="setup-key">Ichimoku</span><span class="setup-val bear" id="sig-ich">Below cloud &middot; Bearish</span></div>
+      <div class="setup-row"><span class="setup-key">Net Volume</span><span class="setup-val bear" id="sig-vol">-3.498B &middot; Distribution</span></div>
+    </div>
+    <div class="setup-card">
+      <div class="setup-title">QML Bias Meter</div>
+      <div class="bias-rows" id="bias-rows"></div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:4px;letter-spacing:1.5px;">OVERALL QML BIAS</div>
+        <div style="font-family:var(--mono);font-size:13px;font-weight:700;" id="overall-bias">BEARISH</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="trade-plan">
+    <div class="trade-plan-title">&#9672; QML Trade Plan &mdash; <span id="tp-ticker">NEPSE</span> (<span id="tp-date">Dec 2025</span>)</div>
+    <div class="tp-row">
+      <div class="tp-block"><div class="tp-label">Scenario A &middot; Bounce</div><div class="tp-label" style="margin-top:6px;">Entry Zone</div><div class="tp-price entry" id="tp-entry">2,600&ndash;2,607</div><div class="tp-note">L-Low bounce</div></div>
+      <div class="tp-div"></div>
+      <div class="tp-block"><div class="tp-label">Stop Loss</div><div class="tp-price sl" id="tp-sl">2,487</div><div class="tp-note">M-Q confluence</div></div>
+      <div class="tp-div"></div>
+      <div class="tp-block"><div class="tp-label">Target 1 (M)</div><div class="tp-price tp1" id="tp-t1">2,653&ndash;2,659</div><div class="tp-note">M cluster</div></div>
+      <div class="tp-div"></div>
+      <div class="tp-block"><div class="tp-label">Target 2 (Q)</div><div class="tp-price tp2" id="tp-t2">2,689&ndash;2,700</div><div class="tp-note">DC-89 zone</div></div>
+      <div class="tp-div"></div>
+      <div class="tp-block"><div class="tp-label">Scenario B &middot; Break</div><div class="tp-label" style="margin-top:6px;">L-Low fails</div><div class="tp-price sl" id="tp-b">Below 2,600</div><div class="tp-note">Next: 2,487</div></div>
+    </div>
+    <div class="rr-badge" id="rr-badge">R:R &asymp; 1:2.0 &middot; Entry 2,607 &rarr; SL 2,487 &rarr; T1 2,653</div>
+  </div>
+</div>
+
+<!-- TAB 2: EDIT INPUTS -->
+<div class="tab-panel" id="tab-editor">
+  <div class="export-bar">
+    <span class="export-label">Changes &#9658;</span>
+    <button class="btn-apply" onclick="applyEdits()">&#10003; Apply &amp; Refresh Dashboard</button>
+    <button class="btn-csv" onclick="exportCSV()" style="margin-left:8px;">&#11015; CSV</button>
+    <button class="btn-xlsx" onclick="exportXLSX()">&#11015; Excel</button>
+  </div>
+  <div class="edit-grid">
+    <div class="edit-section">
+      <div class="edit-section-title">Market Data (OHLCV)</div>
+      <div class="field-row"><span class="field-label">Ticker / Script</span><input id="e-ticker" value="NEPSE"></div>
+      <div class="field-row"><span class="field-label">Date</span><input id="e-date" value="2025-12-11" type="date"></div>
+      <div class="field-row"><span class="field-label">Open</span><input id="e-open" value="2608.10" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">High</span><input id="e-high" value="2611.99" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Low</span><input id="e-low" value="2601.50" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Close</span><input id="e-close" value="2607.37" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Net Volume</span><input id="e-vol" value="-3.498B"></div>
+      <div class="field-row"><span class="field-label">Change Display</span><input id="e-chg" value="-1.66 (-0.06%)"></div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-section-title">Indicator Values</div>
+      <div class="field-row"><span class="field-label">RSI 14</span><input id="e-rsi" value="51.25" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">WMA 9 (RSI)</span><input id="e-wma" value="49.12" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">DPO 21</span><input id="e-dpo" value="30.59" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">SEB 21</span><input id="e-seb" value="2649.03" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">DC-89 Mid</span><input id="e-dc89" value="2653.67" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Ichimoku</span><select id="e-ich"><option value="below">Below cloud (Bearish)</option><option value="inside">Inside cloud (Neutral)</option><option value="above">Above cloud (Bullish)</option></select></div>
+      <div class="field-row"><span class="field-label">52W High</span><input id="e-52wh" value="3028.79" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">52W Low</span><input id="e-52wl" value="2200.00" type="number" step="0.01"></div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-section-title">Trade Plan Values</div>
+      <div class="field-row"><span class="field-label">Entry Low</span><input id="e-entry-lo" value="2600" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Entry High</span><input id="e-entry-hi" value="2607.37" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Stop Loss</span><input id="e-sl" value="2487.17" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Target 1 Low</span><input id="e-t1lo" value="2653" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Target 1 High</span><input id="e-t1hi" value="2659" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Target 2 Low</span><input id="e-t2lo" value="2689" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Target 2 High</span><input id="e-t2hi" value="2700" type="number" step="0.01"></div>
+      <div class="field-row"><span class="field-label">Scenario B level</span><input id="e-scenb" value="2487.17" type="number" step="0.01"></div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-section-title">Structure Signal Text</div>
+      <div class="field-row full"><span class="field-label">Q Structure</span><input id="e-sig-q" value="Downtrend from 3,028"></div>
+      <div class="field-row full"><span class="field-label">M Structure</span><input id="e-sig-m" value="Below all M levels"></div>
+      <div class="field-row full"><span class="field-label">L Structure</span><input id="e-sig-l" value="Inside L range"></div>
+      <div class="field-row full"><span class="field-label">Price vs SEB</span><input id="e-sig-seb" value="Below 2,649 · Bearish"></div>
+      <div class="field-row full"><span class="field-label">Price vs DC-89</span><input id="e-sig-dc" value="Below midline"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: LEVEL MANAGER -->
+<div class="tab-panel" id="tab-levels">
+  <div class="export-bar">
+    <span class="export-label">Levels &#9658;</span>
+    <button class="btn-add" onclick="addLevel()">+ Add Level</button>
+    <button class="btn-apply" onclick="applyEdits()" style="margin-left:8px;">&#10003; Apply to Dashboard</button>
+    <button class="btn-csv" onclick="exportCSV()" style="margin-left:8px;">&#11015; CSV</button>
+    <button class="btn-xlsx" onclick="exportXLSX()">&#11015; Excel</button>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">QML Level Manager</span>
+      <span class="panel-badge">Edit &middot; Add &middot; Remove</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="levels-edit-table" id="lvl-edit-table">
+        <thead><tr><th>#</th><th>Tier</th><th>Type</th><th>Price</th><th>Confluence Tag</th><th>Conf Class</th><th>Note</th><th>Del</th></tr></thead>
+        <tbody id="lvl-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: SIGNAL ENGINE -->
+<div class="tab-panel" id="tab-signal">
+<style>
+.sig-engine{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.sig-layer{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.sig-layer-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.sig-field{display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:9px;}
+.sig-field label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;}
+.sig-result{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:24px;
+  margin-bottom:16px;text-align:center;}
+.sig-main{font-size:48px;font-weight:700;letter-spacing:4px;line-height:1;}
+.sig-main.long{color:var(--bull);text-shadow:0 0 24px rgba(46,204,113,0.4);}
+.sig-main.short{color:var(--bear);text-shadow:0 0 24px rgba(231,76,60,0.4);}
+.sig-main.wait{color:var(--neutral);text-shadow:0 0 24px rgba(240,192,64,0.3);}
+.sig-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px;letter-spacing:1px;}
+.sig-score{font-family:var(--mono);font-size:13px;font-weight:700;margin-top:6px;}
+.layer-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.layer-check{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:11px 14px;display:flex;align-items:center;gap:10px;}
+.check-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.check-dot.pass{background:var(--bull);box-shadow:0 0 6px rgba(46,204,113,0.5);}
+.check-dot.fail{background:var(--bear);box-shadow:0 0 6px rgba(231,76,60,0.4);}
+.check-dot.warn{background:var(--neutral);box-shadow:0 0 6px rgba(240,192,64,0.3);}
+.check-label{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.check-val{font-family:var(--mono);font-size:11px;font-weight:700;margin-left:auto;}
+.check-val.pass{color:var(--bull);}
+.check-val.fail{color:var(--bear);}
+.check-val.warn{color:var(--neutral);}
+.vol-rule{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.vol-rule-label{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.vol-rule-val{font-family:var(--mono);font-size:11px;font-weight:700;}
+.btn-calc{background:var(--q);color:#fff;width:100%;font-size:12px;padding:12px;margin-top:4px;}
+.btn-calc:hover{background:#6b5de0;}
+.conf-meter{height:8px;background:var(--bg3);border-radius:4px;margin:10px 0 4px;overflow:hidden;}
+.conf-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+.conf-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;}
+</style>
+
+<div style="padding:4px 0 14px;">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+    &#9889; SIGNAL ENGINE &mdash; PRICE &middot; DPO &middot; VOLUME &middot; QML &mdash; 4 LAYERS ONLY
+  </div>
+
+  <!-- SIGNAL OUTPUT -->
+  <div class="sig-result">
+    <div class="sig-main wait" id="se-main">WAIT</div>
+    <div class="sig-sub" id="se-sub">Enter values below and calculate</div>
+    <div class="sig-score" id="se-score" style="color:var(--neutral);">0 / 4 layers confirmed</div>
+    <div class="conf-meter" style="width:240px;">
+      <div class="conf-fill" id="se-conf-fill" style="width:0%;background:var(--neutral);"></div>
+    </div>
+    <div class="conf-label" id="se-conf-label">Confidence: 0%</div>
+  </div>
+
+  <!-- LAYER CHECKS -->
+  <div class="layer-checks">
+    <div class="layer-check">
+      <div class="check-dot warn" id="dot-1"></div>
+      <div>
+        <div class="check-label">Layer 1 &mdash; Price / Pivot</div>
+        <div class="check-val warn" id="chk-1">Not calculated</div>
+      </div>
+    </div>
+    <div class="layer-check">
+      <div class="check-dot warn" id="dot-2"></div>
+      <div>
+        <div class="check-label">Layer 2 &mdash; DPO Cycle</div>
+        <div class="check-val warn" id="chk-2">Not calculated</div>
+      </div>
+    </div>
+    <div class="layer-check">
+      <div class="check-dot warn" id="dot-3"></div>
+      <div>
+        <div class="check-label">Layer 3 &mdash; Volume Rule</div>
+        <div class="check-val warn" id="chk-3">Not calculated</div>
+      </div>
+    </div>
+    <div class="layer-check">
+      <div class="check-dot warn" id="dot-4"></div>
+      <div>
+        <div class="check-label">Layer 4 &mdash; QML Level</div>
+        <div class="check-val warn" id="chk-4">Not calculated</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT LAYERS -->
+  <div class="sig-engine">
+
+    <!-- LAYER 1: PRICE / PIVOT -->
+    <div class="sig-layer">
+      <div class="sig-layer-title" style="color:var(--q);">&#9670; Layer 1 &mdash; Price / Pivot</div>
+      <div class="sig-field"><label>Close Price</label><input id="se-close" type="number" step="0.01" placeholder="e.g. 2635"></div>
+      <div class="sig-field"><label>Pivot (P)</label><input id="se-pivot" type="number" step="0.01" placeholder="e.g. 2620"></div>
+      <div class="sig-field"><label>RSI (filter only)</label><input id="se-rsi" type="number" step="0.01" placeholder="e.g. 52"></div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:6px;line-height:1.6;">
+        Close &gt; Pivot = Bullish bias<br>
+        Close &lt; Pivot + RSI &lt; 50 = Downtrend
+      </div>
+    </div>
+
+    <!-- LAYER 2: DPO -->
+    <div class="sig-layer">
+      <div class="sig-layer-title" style="color:var(--m);">&#9670; Layer 2 &mdash; DPO Cycle Strength</div>
+      <div class="sig-field"><label>DPO 21 Value</label><input id="se-dpo" type="number" step="0.01" placeholder="e.g. 30.59"></div>
+      <div class="sig-field"><label>DPO Direction</label>
+        <select id="se-dpo-dir">
+          <option value="rising">Rising &#9650;</option>
+          <option value="falling">Falling &#9660;</option>
+          <option value="flat">Flat &#8212;</option>
+        </select>
+      </div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:6px;line-height:1.6;">
+        DPO &gt; 0 + Rising = Cycle strong<br>
+        DPO &lt; 0 = Cycle weak, wait or short
+      </div>
+    </div>
+
+    <!-- LAYER 3: VOLUME -->
+    <div class="sig-layer">
+      <div class="sig-layer-title" style="color:var(--l);">&#9670; Layer 3 &mdash; Volume Rule</div>
+      <div class="sig-field"><label>Today's Volume</label><input id="se-vol-raw" placeholder="e.g. 8.2B or 12M"></div>
+      <div class="sig-field"><label>Volume at</label>
+        <select id="se-vol-pos">
+          <option value="support">Support / Rest level</option>
+          <option value="top">Top / Resistance</option>
+          <option value="mid">Mid range</option>
+        </select>
+      </div>
+      <div class="sig-field"><label>5-candle streak</label>
+        <select id="se-vol-streak">
+          <option value="0">0 candles high vol</option>
+          <option value="1">1&ndash;2 candles</option>
+          <option value="3">3&ndash;4 candles</option>
+          <option value="5">5+ candles &#9889;</option>
+        </select>
+      </div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;">
+        7B+ at top = distribution (bear)<br>
+        7M+ at support = accumulation (bull)<br>
+        5 candle streak = breakout imminent
+      </div>
+    </div>
+
+    <!-- LAYER 4: QML -->
+    <div class="sig-layer">
+      <div class="sig-layer-title" style="color:var(--q);">&#9670; Layer 4 &mdash; QML Level</div>
+      <div class="sig-field"><label>Nearest Q level</label><input id="se-qlvl" type="number" step="0.01" placeholder="e.g. 2980"></div>
+      <div class="sig-field"><label>Nearest M level</label><input id="se-mlvl" type="number" step="0.01" placeholder="e.g. 2653"></div>
+      <div class="sig-field"><label>Nearest L level</label><input id="se-llvl" type="number" step="0.01" placeholder="e.g. 2633"></div>
+      <div class="sig-field"><label>Price vs levels</label>
+        <select id="se-qml-pos">
+          <option value="above-all">Above all QML levels</option>
+          <option value="above-m">Above M, below Q</option>
+          <option value="above-l">Above L, below M</option>
+          <option value="at-support">At Q/M support zone</option>
+          <option value="below-all">Below all levels</option>
+        </select>
+      </div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:4px;line-height:1.6;">
+        At support + volume dry = accumulation<br>
+        Above M = bullish structure confirmed
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calcSignal()">&#9889; CALCULATE SIGNAL</button>
+</div>
+</div>
+
+<!-- TAB: FORWARD PLANNER -->
+<div class="tab-panel" id="tab-planner">
+<style>
+.fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.fp-section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.fp-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.fp-field{display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:8px;}
+.fp-field label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;}
+.fp-field.full{grid-template-columns:1fr;}
+
+/* 52W RANGE BAR */
+.range-bar-wrap{padding:14px;background:var(--bg3);border-radius:6px;margin:12px 0;}
+.range-bar-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:8px;}
+.range-bar-outer{position:relative;height:20px;background:var(--bg2);border-radius:10px;border:1px solid var(--border2);}
+.range-bar-fill{position:absolute;top:0;height:100%;border-radius:10px;background:linear-gradient(90deg,var(--bear),var(--neutral),var(--bull));opacity:0.3;}
+.range-bar-cur{position:absolute;top:-4px;width:4px;height:28px;background:#fff;border-radius:2px;transform:translateX(-50%);}
+.range-bar-cur-label{position:absolute;top:-20px;background:#fff;color:#000;font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:2px;transform:translateX(-50%);}
+.range-pct{font-family:var(--mono);font-size:11px;text-align:center;margin-top:8px;}
+
+/* VOLUME GUIDANCE */
+.vol-guide{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+.vol-box{background:var(--bg3);border-radius:5px;padding:10px 12px;border:1px solid var(--border);}
+.vol-box-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:5px;}
+.vol-box-val{font-family:var(--mono);font-size:14px;font-weight:700;}
+.vol-box-sig{font-family:var(--mono);font-size:8px;margin-top:3px;}
+
+/* QML AUTO LEVELS */
+.qml-auto{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0;}
+.qml-auto-box{background:var(--bg3);border-radius:5px;padding:10px 12px;text-align:center;}
+.qml-auto-tier{font-family:var(--mono);font-size:9px;font-weight:700;margin-bottom:4px;}
+.qml-auto-price{font-family:var(--mono);font-size:16px;font-weight:700;color:#fff;}
+.qml-auto-dist{font-family:var(--mono);font-size:8px;margin-top:2px;}
+
+/* PLAN CARDS */
+.plan-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.plan-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;position:relative;overflow:hidden;}
+.plan-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.plan-card.daily::before{background:var(--l);}
+.plan-card.weekly::before{background:var(--m);}
+.plan-card.monthly::before{background:var(--q);}
+.plan-card-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.plan-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.plan-row:last-child{border-bottom:none;}
+.plan-key{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.plan-val{font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;}
+.plan-val.bull{color:var(--bull);}
+.plan-val.bear{color:var(--bear);}
+.plan-val.q{color:var(--q);}
+.plan-val.m{color:var(--m);}
+.plan-val.l{color:var(--l);}
+
+/* GANN CYCLES */
+.gann-cycles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+.gann-box{background:var(--bg3);border-radius:5px;padding:10px;text-align:center;border:1px solid var(--border);}
+.gann-box.active{border-color:var(--q);background:rgba(124,106,240,0.1);}
+.gann-days{font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px;}
+.gann-date{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;}
+.gann-dist{font-family:var(--mono);font-size:8px;margin-top:3px;}
+
+/* SAVED PLANS TABLE */
+.plans-table{width:100%;border-collapse:collapse;}
+.plans-table th{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.plans-table td{padding:6px 10px;font-family:var(--mono);font-size:10px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.plans-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+.btn-calc-plan{background:var(--q);color:#fff;width:100%;font-size:12px;padding:12px;margin-top:8px;}
+.btn-calc-plan:hover{background:#6b5de0;}
+.btn-save-plan{background:rgba(26,184,122,0.15);color:var(--m);border:1px solid rgba(26,184,122,0.3);width:100%;margin-top:8px;}
+.btn-save-plan:hover{background:rgba(26,184,122,0.28);}
+</style>
+
+<div style="padding:4px 0 14px;">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+    &#128198; FORWARD PLANNER &mdash; 52W RANGE &middot; VOLUME GUIDANCE &middot; DAILY &middot; WEEKLY &middot; MONTHLY
+  </div>
+
+  <div class="fp-grid">
+
+    <!-- LEFT: DATA INPUT -->
+    <div class="fp-section">
+      <div class="fp-title" style="color:var(--q);">&#9670; Scrip Data Input</div>
+
+      <div class="fp-field">
+        <label>Scrip / Index</label>
+        <select id="fp-scrip">
+          <optgroup label="── Indices ──">
+            <option>NEPSE</option><option>BANKING</option><option>HYDROPOWER</option>
+            <option>FINANCE</option><option>MICROFINANCE</option><option>NONLIFEINSU</option>
+            <option>LIFEINSU</option><option>DEVBANK</option><option>HOTELS</option>
+            <option>TRADING</option><option>MANUFACTURING</option><option>INVESTMENT</option>
+            <option>OTHERS</option><option>MUTUALFUND</option>
+          </optgroup>
+          <optgroup label="── Banking ──">
+            <option>NABIL</option><option>NICA</option><option>SANIMA</option>
+            <option>EBL</option><option>ADBL</option><option>MEGA</option>
+            <option>SBL</option><option>KBL</option><option>HBL</option>
+            <option>BOK</option><option>CZBIL</option><option>NMB</option>
+            <option>PCBL</option><option>CBL</option><option>NIMB</option>
+            <option>NBL</option><option>PRVU</option><option>GBIME</option>
+            <option>MBL</option><option>SBI</option>
+          </optgroup>
+          <optgroup label="── HydroPower ──">
+            <option>RADHI</option><option>AKJCL</option><option>RURU</option>
+            <option>CHCL</option><option>UPPER</option><option>SHPC</option>
+            <option>KPCL</option><option>UNHPL</option><option>NHDL</option>
+            <option>HDHPC</option><option>UMHL</option><option>RHPL</option>
+            <option>GHL</option><option>MHNL</option><option>NGPL</option>
+            <option>SSHL</option><option>HURJA</option><option>HPPL</option>
+          </optgroup>
+          <optgroup label="── Finance/MF ──">
+            <option>NFS</option><option>SIFC</option><option>GFCL</option>
+            <option>CBBL</option><option>DDBL</option><option>SKBBL</option>
+            <option>SMFBS</option><option>NUBL</option>
+          </optgroup>
+          <optgroup label="── Insurance ──">
+            <option>NLIC</option><option>LICN</option><option>NLICL</option>
+            <option>PICL</option><option>SICL</option><option>HGI</option>
+          </optgroup>
+          <optgroup label="── Others ──">
+            <option>NTC</option><option>HIDCL</option><option>GCIL</option>
+            <option>VLBS</option><option>MPFL</option><option>RLFL</option>
+            <option>HATHY</option><option>SMH</option><option>NLG</option>
+            <option>NIFRA</option><option>BNT</option><option>UNL</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="fp-field"><label>Current Price</label><input id="fp-cur" type="number" step="0.01" placeholder="Today's close" oninput="updateRangeBar()"></div>
+      <div class="fp-field"><label>52W High</label><input id="fp-52wh" type="number" step="0.01" placeholder="52 week high" oninput="updateRangeBar()"></div>
+      <div class="fp-field"><label>52W Low</label><input id="fp-52wl" type="number" step="0.01" placeholder="52 week low" oninput="updateRangeBar()"></div>
+      <div class="fp-field"><label>Volume at 52W High</label><input id="fp-vh" placeholder="e.g. 8.5B or 12M"></div>
+      <div class="fp-field"><label>Volume at 52W Low</label><input id="fp-vl" placeholder="e.g. 1.2B or 3M"></div>
+      <div class="fp-field"><label>Today's Volume</label><input id="fp-vcur" placeholder="e.g. 3.7B"></div>
+      <div class="fp-field"><label>Swing Low Date</label><input id="fp-swdate" type="date" title="Date of last major swing low for Gann cycles"></div>
+      <div class="fp-field"><label>Planned Timeframe</label>
+        <select id="fp-tf">
+          <option value="daily">Daily — Tomorrow</option>
+          <option value="weekly" selected>Weekly — Next Week</option>
+          <option value="monthly">Monthly — Next Month</option>
+        </select>
+      </div>
+
+      <button class="btn-calc-plan" onclick="calcPlan()">&#128198; Calculate Forward Plan</button>
+    </div>
+
+    <!-- RIGHT: RANGE + GUIDANCE -->
+    <div class="fp-section">
+      <div class="fp-title" style="color:var(--m);">&#9670; 52W Range Position</div>
+
+      <div class="range-bar-wrap">
+        <div class="range-bar-label">
+          <span id="fp-low-label" style="color:var(--bear);">52W Low: —</span>
+          <span id="fp-high-label" style="color:var(--bull);">52W High: —</span>
+        </div>
+        <div class="range-bar-outer">
+          <div class="range-bar-fill" style="width:100%;"></div>
+          <div class="range-bar-cur" id="fp-cur-marker" style="left:50%;display:none;"></div>
+          <div class="range-bar-cur-label" id="fp-cur-label" style="left:50%;display:none;">—</div>
+        </div>
+        <div class="range-pct" id="fp-range-pct" style="color:var(--muted);">Enter 52W High/Low and Current Price</div>
+      </div>
+
+      <div class="fp-title" style="color:var(--l);margin-top:14px;">&#9670; Volume Guidance</div>
+      <div class="vol-guide">
+        <div class="vol-box">
+          <div class="vol-box-label">Volume at 52W HIGH</div>
+          <div class="vol-box-val" id="fp-vh-display" style="color:var(--bear);">—</div>
+          <div class="vol-box-sig" id="fp-vh-sig" style="color:var(--muted);">Distribution or Breakout?</div>
+        </div>
+        <div class="vol-box">
+          <div class="vol-box-label">Volume at 52W LOW</div>
+          <div class="vol-box-val" id="fp-vl-display" style="color:var(--bull);">—</div>
+          <div class="vol-box-sig" id="fp-vl-sig" style="color:var(--muted);">Accumulation or Panic?</div>
+        </div>
+      </div>
+
+      <div class="fp-title" style="color:var(--q);margin-top:14px;">&#9670; Auto QML Levels (from 52W data)</div>
+      <div class="qml-auto">
+        <div class="qml-auto-box">
+          <div class="qml-auto-tier" style="color:var(--q);">Q Level</div>
+          <div class="qml-auto-price" id="fp-qlvl">—</div>
+          <div class="qml-auto-dist" id="fp-qdist" style="color:var(--muted);">52W High</div>
+        </div>
+        <div class="qml-auto-box">
+          <div class="qml-auto-tier" style="color:var(--m);">M Level</div>
+          <div class="qml-auto-price" id="fp-mlvl">—</div>
+          <div class="qml-auto-dist" id="fp-mdist" style="color:var(--muted);">50% Range</div>
+        </div>
+        <div class="qml-auto-box">
+          <div class="qml-auto-tier" style="color:var(--l);">L Level</div>
+          <div class="qml-auto-price" id="fp-llvl">—</div>
+          <div class="qml-auto-dist" id="fp-ldist" style="color:var(--muted);">38.2% Range</div>
+        </div>
+      </div>
+
+      <div class="fp-title" style="color:var(--q);margin-top:14px;">&#9670; Gann Time Cycles (from swing low)</div>
+      <div class="gann-cycles" id="fp-gann-cycles">
+        <div class="gann-box"><div class="gann-days">45 days</div><div class="gann-date">—</div><div class="gann-dist" style="color:var(--muted);">—</div></div>
+        <div class="gann-box"><div class="gann-days">90 days</div><div class="gann-date">—</div><div class="gann-dist" style="color:var(--muted);">—</div></div>
+        <div class="gann-box"><div class="gann-days">180 days</div><div class="gann-date">—</div><div class="gann-dist" style="color:var(--muted);">—</div></div>
+        <div class="gann-box"><div class="gann-days">360 days</div><div class="gann-date">—</div><div class="gann-dist" style="color:var(--muted);">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN CARDS -->
+  <div id="fp-plan-cards" style="display:none;">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:12px;">&#128198; FORWARD PLAN OUTPUT</div>
+    <div class="plan-cards">
+      <div class="plan-card daily">
+        <div class="plan-card-title">Daily Plan — Tomorrow</div>
+        <div class="plan-row"><span class="plan-key">Bias</span><span class="plan-val" id="pp-d-bias">—</span></div>
+        <div class="plan-row"><span class="plan-key">Watch Level</span><span class="plan-val l" id="pp-d-watch">—</span></div>
+        <div class="plan-row"><span class="plan-key">Entry Zone</span><span class="plan-val bull" id="pp-d-entry">—</span></div>
+        <div class="plan-row"><span class="plan-key">Stop Loss</span><span class="plan-val bear" id="pp-d-sl">—</span></div>
+        <div class="plan-row"><span class="plan-key">Target</span><span class="plan-val m" id="pp-d-tgt">—</span></div>
+        <div class="plan-row"><span class="plan-key">R:R</span><span class="plan-val q" id="pp-d-rr">—</span></div>
+      </div>
+      <div class="plan-card weekly">
+        <div class="plan-card-title">Weekly Plan — Next Week</div>
+        <div class="plan-row"><span class="plan-key">Bias</span><span class="plan-val" id="pp-w-bias">—</span></div>
+        <div class="plan-row"><span class="plan-key">Key Level</span><span class="plan-val m" id="pp-w-watch">—</span></div>
+        <div class="plan-row"><span class="plan-key">Entry Zone</span><span class="plan-val bull" id="pp-w-entry">—</span></div>
+        <div class="plan-row"><span class="plan-key">Stop Loss</span><span class="plan-val bear" id="pp-w-sl">—</span></div>
+        <div class="plan-row"><span class="plan-key">Target 1</span><span class="plan-val m" id="pp-w-t1">—</span></div>
+        <div class="plan-row"><span class="plan-key">Target 2</span><span class="plan-val q" id="pp-w-t2">—</span></div>
+        <div class="plan-row"><span class="plan-key">R:R</span><span class="plan-val q" id="pp-w-rr">—</span></div>
+      </div>
+      <div class="plan-card monthly">
+        <div class="plan-card-title">Monthly Plan — Next Month</div>
+        <div class="plan-row"><span class="plan-key">Bias</span><span class="plan-val" id="pp-m-bias">—</span></div>
+        <div class="plan-row"><span class="plan-key">Key Level</span><span class="plan-val q" id="pp-m-watch">—</span></div>
+        <div class="plan-row"><span class="plan-key">Entry Zone</span><span class="plan-val bull" id="pp-m-entry">—</span></div>
+        <div class="plan-row"><span class="plan-key">Stop Loss</span><span class="plan-val bear" id="pp-m-sl">—</span></div>
+        <div class="plan-row"><span class="plan-key">Target 1</span><span class="plan-val m" id="pp-m-t1">—</span></div>
+        <div class="plan-row"><span class="plan-key">Target 2</span><span class="plan-val q" id="pp-m-t2">—</span></div>
+        <div class="plan-row"><span class="plan-key">R:R</span><span class="plan-val q" id="pp-m-rr">—</span></div>
+      </div>
+    </div>
+    <button class="btn-save-plan" onclick="savePlan()">&#10010; Save Plan to List</button>
+  </div>
+
+  <!-- SAVED PLANS -->
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <span class="panel-title">Saved Plans</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-csv" onclick="exportPlansCSV()">&#11015; Export CSV</button>
+        <button class="btn-clear" onclick="clearPlans()" style="background:rgba(231,76,60,0.1);color:var(--bear);border:1px solid rgba(231,76,60,0.2);padding:5px 10px;font-size:9px;">Clear All</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="plans-table">
+        <thead><tr><th>#</th><th>Scrip</th><th>TF</th><th>Bias</th><th>Entry</th><th>SL</th><th>T1</th><th>T2</th><th>R:R</th><th>52W%</th><th>Gann</th><th>Del</th></tr></thead>
+        <tbody id="plans-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB: TRADING JOURNAL -->
+<div class="tab-panel" id="tab-journal">
+<style>
+.jnl-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+.jnl-stat{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:11px 13px;}
+.jnl-stat-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.jnl-stat-val{font-family:var(--mono);font-size:20px;font-weight:700;color:#fff;}
+.jnl-stat-val.bull{color:var(--bull);}
+.jnl-stat-val.bear{color:var(--bear);}
+.jnl-stat-val.neut{color:var(--neutral);}
+
+.jnl-form{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;}
+.jnl-form-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--q);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.jnl-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.jnl-form-field{display:flex;flex-direction:column;gap:4px;}
+.jnl-form-field label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.jnl-rules{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.jnl-rule{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:8px 10px;cursor:pointer;transition:all .15s;}
+.jnl-rule:hover{border-color:var(--border2);}
+.jnl-rule.yes{background:rgba(46,204,113,0.08);border-color:rgba(46,204,113,0.3);}
+.jnl-rule.no{background:rgba(231,76,60,0.08);border-color:rgba(231,76,60,0.3);}
+.jnl-rule-label{font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:6px;}
+.jnl-rule-btns{display:flex;gap:4px;}
+.jnl-rule-btn{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:2px;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--muted);flex:1;text-align:center;}
+.jnl-rule-btn.active-yes{background:rgba(46,204,113,0.2);color:var(--bull);border-color:rgba(46,204,113,0.4);}
+.jnl-rule-btn.active-no{background:rgba(231,76,60,0.15);color:var(--bear);border-color:rgba(231,76,60,0.3);}
+.jnl-verdict{border-radius:6px;padding:10px 14px;margin-bottom:12px;font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;letter-spacing:1px;}
+.jnl-verdict.system{background:rgba(46,204,113,0.1);color:var(--bull);border:1px solid rgba(46,204,113,0.25);}
+.jnl-verdict.broken{background:rgba(231,76,60,0.1);color:var(--bear);border:1px solid rgba(231,76,60,0.25);}
+.jnl-verdict.partial{background:rgba(240,192,64,0.1);color:var(--neutral);border:1px solid rgba(240,192,64,0.25);}
+.btn-add-trade{background:var(--q);color:#fff;width:100%;font-size:12px;padding:12px;}
+.btn-add-trade:hover{background:#6b5de0;}
+
+.jnl-log{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.jnl-log-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.jnl-table{width:100%;border-collapse:collapse;}
+.jnl-table th{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.jnl-table td{padding:7px 10px;font-family:var(--mono);font-size:10px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.jnl-table tr:hover td{background:rgba(255,255,255,0.02);}
+.trade-long{color:var(--bull);}
+.trade-short{color:var(--bear);}
+.pnl-pos{color:var(--bull);}
+.pnl-neg{color:var(--bear);}
+.sys-badge{font-size:8px;padding:2px 6px;border-radius:2px;font-family:var(--mono);}
+.sys-yes{background:rgba(46,204,113,0.12);color:var(--bull);border:1px solid rgba(46,204,113,0.25);}
+.sys-partial{background:rgba(240,192,64,0.1);color:var(--neutral);border:1px solid rgba(240,192,64,0.2);}
+.sys-no{background:rgba(231,76,60,0.1);color:var(--bear);border:1px solid rgba(231,76,60,0.2);}
+.btn-del-trade{background:transparent;color:var(--muted);border:none;font-size:10px;padding:2px 6px;cursor:pointer;}
+.btn-del-trade:hover{color:var(--bear);}
+.pos-calc{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;}
+.pos-calc-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--m);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.pos-calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.pos-result{background:var(--bg3);border-radius:5px;padding:12px;text-align:center;margin-top:8px;}
+.pos-result-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;}
+.pos-result-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--m);}
+</style>
+
+<div style="padding:4px 0 14px;">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+    &#128214; PERSONAL TRADING JOURNAL &mdash; YOUR DATA &middot; YOUR TRADES &middot; PRIVATE
+  </div>
+
+  <!-- STATS ROW -->
+  <div class="jnl-stats">
+    <div class="jnl-stat"><div class="jnl-stat-label">Total Trades</div><div class="jnl-stat-val" id="js-total">0</div></div>
+    <div class="jnl-stat"><div class="jnl-stat-label">Win Rate</div><div class="jnl-stat-val bull" id="js-winrate">0%</div></div>
+    <div class="jnl-stat"><div class="jnl-stat-label">Total P&amp;L</div><div class="jnl-stat-val" id="js-pnl">0.00</div></div>
+    <div class="jnl-stat"><div class="jnl-stat-label">System Trades</div><div class="jnl-stat-val neut" id="js-systrades">0%</div></div>
+    <div class="jnl-stat"><div class="jnl-stat-label">Avg R:R</div><div class="jnl-stat-val" id="js-rr">0.00</div></div>
+  </div>
+
+  <!-- POSITION SIZER -->
+  <div class="pos-calc">
+    <div class="pos-calc-title">&#9670; Position Size Calculator</div>
+    <div class="pos-calc-grid">
+      <div class="jnl-form-field"><label>Capital (Rs)</label><input id="pc-capital" type="number" placeholder="e.g. 100000" oninput="calcPosition()"></div>
+      <div class="jnl-form-field"><label>Risk % per trade</label><input id="pc-risk" type="number" step="0.1" placeholder="e.g. 2" oninput="calcPosition()"></div>
+      <div class="jnl-form-field"><label>Entry Price</label><input id="pc-entry" type="number" step="0.01" placeholder="e.g. 2635" oninput="calcPosition()"></div>
+      <div class="jnl-form-field"><label>Stop Loss Price</label><input id="pc-sl" type="number" step="0.01" placeholder="e.g. 2487" oninput="calcPosition()"></div>
+      <div class="jnl-form-field"><label>Target Price</label><input id="pc-target" type="number" step="0.01" placeholder="e.g. 2659" oninput="calcPosition()"></div>
+      <div class="jnl-form-field"><label>Sector</label>
+        <select id="pc-sector">
+          <optgroup label="── Indices ──">
+            <option>NEPSE</option><option>BANKING</option><option>HYDROPOWER</option>
+            <option>FINANCE</option><option>MICROFINANCE</option><option>NONLIFEINSU</option>
+            <option>LIFEINSU</option><option>DEVBANK</option><option>HOTELS</option>
+            <option>TRADING</option><option>MANUFACTURING</option><option>INVESTMENT</option>
+            <option>OTHERS</option><option>MUTUALFUND</option>
+          </optgroup>
+          <optgroup label="── Banking ──">
+            <option>NABIL</option><option>NICA</option><option>SANIMA</option>
+            <option>EBL</option><option>ADBL</option><option>MEGA</option>
+            <option>MBL</option><option>PCBL</option><option>CBL</option>
+            <option>SBL</option><option>KBL</option><option>NIMB</option>
+            <option>NBL</option><option>PRVU</option><option>GBIME</option>
+            <option>HBL</option><option>BOK</option><option>SBI</option>
+            <option>CZBIL</option><option>NMB</option>
+          </optgroup>
+          <optgroup label="── Development Bank ──">
+            <option>GBBL</option><option>MLBL</option><option>SADBL</option>
+            <option>KSBBL</option><option>MNBBL</option><option>CORBL</option>
+          </optgroup>
+          <optgroup label="── Finance ──">
+            <option>NFS</option><option>SIFC</option><option>GFCL</option>
+            <option>MFIL</option><option>CFCL</option><option>ICFC</option>
+          </optgroup>
+          <optgroup label="── Microfinance ──">
+            <option>CBBL</option><option>DDBL</option><option>SKBBL</option>
+            <option>SMFBS</option><option>SWBBL</option><option>NUBL</option>
+          </optgroup>
+          <optgroup label="── HydroPower ──">
+            <option>RADHI</option><option>AKJCL</option><option>RURU</option>
+            <option>CHCL</option><option>UNHPL</option><option>HDHPC</option>
+            <option>UPPER</option><option>NHDL</option><option>SHPC</option>
+            <option>KPCL</option><option>HPPL</option><option>UMHL</option>
+            <option>RHPL</option><option>GHL</option><option>MHNL</option>
+            <option>NGPL</option><option>SSHL</option><option>HURJA</option>
+            <option>PMHPL</option><option>BHPL</option>
+          </optgroup>
+          <optgroup label="── Insurance ──">
+            <option>NLIC</option><option>LICN</option><option>NLICL</option>
+            <option>PICL</option><option>SICL</option><option>PRIN</option>
+            <option>HGI</option><option>SGI</option><option>IGI</option>
+          </optgroup>
+          <optgroup label="── Others ──">
+            <option>NTC</option><option>NIFRA</option><option>SHIVM</option>
+            <option>BNT</option><option>NHDCL</option><option>HIDCL</option>
+            <option>RIDI</option><option>BPCL</option><option>GCIL</option>
+            <option>UNL</option><option>VLBS</option><option>MPFL</option>
+            <option>RLFL</option><option>HATHY</option><option>SMH</option>
+            <option>NLG</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <div class="pos-result"><div class="pos-result-label">Risk Amount (Rs)</div><div class="pos-result-val" id="pc-riskamt">—</div></div>
+      <div class="pos-result"><div class="pos-result-label">Position Size (Units)</div><div class="pos-result-val" id="pc-units">—</div></div>
+      <div class="pos-result"><div class="pos-result-label">R:R Ratio</div><div class="pos-result-val" id="pc-rratio">—</div></div>
+      <div class="pos-result"><div class="pos-result-label">Total Capital Used</div><div class="pos-result-val" id="pc-capused">—</div></div>
+    </div>
+  </div>
+
+  <!-- TRADE ENTRY FORM -->
+  <div class="jnl-form">
+    <div class="jnl-form-title">&#9670; New Trade Entry</div>
+    <div class="jnl-form-grid">
+      <div class="jnl-form-field"><label>Date</label><input id="jf-date" type="date"></div>
+      <div class="jnl-form-field"><label>Sector / Scrip</label>
+        <select id="jf-sector">
+          <optgroup label="── Indices ──">
+            <option>NEPSE</option><option>BANKING</option><option>HYDROPOWER</option>
+            <option>FINANCE</option><option>MICROFINANCE</option><option>NONLIFEINSU</option>
+            <option>LIFEINSU</option><option>DEVBANK</option><option>HOTELS</option>
+            <option>TRADING</option><option>MANUFACTURING</option><option>INVESTMENT</option>
+            <option>OTHERS</option><option>MUTUALFUND</option>
+          </optgroup>
+          <optgroup label="── Banking ──">
+            <option>NABIL</option><option>NICA</option><option>SANIMA</option>
+            <option>EBL</option><option>ADBL</option><option>MEGA</option>
+            <option>MBL</option><option>PCBL</option><option>CBL</option>
+            <option>SBL</option><option>KBL</option><option>NIMB</option>
+            <option>NBL</option><option>PRVU</option><option>GBIME</option>
+            <option>HBL</option><option>BOK</option><option>SBI</option>
+            <option>CZBIL</option><option>NMB</option>
+          </optgroup>
+          <optgroup label="── Development Bank ──">
+            <option>GBBL</option><option>MLBL</option><option>SADBL</option>
+            <option>KSBBL</option><option>MNBBL</option><option>CORBL</option>
+          </optgroup>
+          <optgroup label="── Finance ──">
+            <option>NFS</option><option>SIFC</option><option>GFCL</option>
+            <option>MFIL</option><option>CFCL</option><option>ICFC</option>
+          </optgroup>
+          <optgroup label="── Microfinance ──">
+            <option>CBBL</option><option>DDBL</option><option>SKBBL</option>
+            <option>SMFBS</option><option>SWBBL</option><option>NUBL</option>
+          </optgroup>
+          <optgroup label="── HydroPower ──">
+            <option>RADHI</option><option>AKJCL</option><option>RURU</option>
+            <option>CHCL</option><option>UNHPL</option><option>HDHPC</option>
+            <option>UPPER</option><option>NHDL</option><option>SHPC</option>
+            <option>KPCL</option><option>HPPL</option><option>UMHL</option>
+            <option>RHPL</option><option>GHL</option><option>MHNL</option>
+            <option>NGPL</option><option>SSHL</option><option>HURJA</option>
+            <option>PMHPL</option><option>BHPL</option>
+          </optgroup>
+          <optgroup label="── Insurance ──">
+            <option>NLIC</option><option>LICN</option><option>NLICL</option>
+            <option>PICL</option><option>SICL</option><option>PRIN</option>
+            <option>HGI</option><option>SGI</option><option>IGI</option>
+          </optgroup>
+          <optgroup label="── Others ──">
+            <option>NTC</option><option>NIFRA</option><option>SHIVM</option>
+            <option>BNT</option><option>NHDCL</option><option>HIDCL</option>
+            <option>RIDI</option><option>BPCL</option><option>GCIL</option>
+            <option>UNL</option><option>VLBS</option><option>MPFL</option>
+            <option>RLFL</option><option>HATHY</option><option>SMH</option>
+            <option>NLG</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="jnl-form-field"><label>Direction</label>
+        <select id="jf-dir"><option value="LONG">LONG &#9650;</option><option value="SHORT">SHORT &#9660;</option></select>
+      </div>
+      <div class="jnl-form-field"><label>Entry Price</label><input id="jf-entry" type="number" step="0.01" placeholder="e.g. 2635"></div>
+      <div class="jnl-form-field"><label>Exit Price</label><input id="jf-exit" type="number" step="0.01" placeholder="e.g. 2659"></div>
+      <div class="jnl-form-field"><label>Stop Loss</label><input id="jf-sl" type="number" step="0.01" placeholder="e.g. 2487"></div>
+      <div class="jnl-form-field"><label>Volume / Units</label><input id="jf-vol" type="number" placeholder="e.g. 500"></div>
+      <div class="jnl-form-field"><label>Status</label>
+        <select id="jf-status"><option value="open">Open</option><option value="closed">Closed</option><option value="sl">Stopped Out</option></select>
+      </div>
+    </div>
+
+    <!-- RULE CHECK -->
+    <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">&#9672; System Rule Check — Did this trade follow your rules?</div>
+    <div class="jnl-rules">
+      <div class="jnl-rule" id="jr-1">
+        <div class="jnl-rule-label">Rule 1: Close &gt; Pivot?</div>
+        <div class="jnl-rule-btns">
+          <div class="jnl-rule-btn" id="jrb-1y" onclick="setRule(1,'yes')">YES</div>
+          <div class="jnl-rule-btn" id="jrb-1n" onclick="setRule(1,'no')">NO</div>
+        </div>
+      </div>
+      <div class="jnl-rule" id="jr-2">
+        <div class="jnl-rule-label">Rule 2: DPO &gt; 0 or rising?</div>
+        <div class="jnl-rule-btns">
+          <div class="jnl-rule-btn" id="jrb-2y" onclick="setRule(2,'yes')">YES</div>
+          <div class="jnl-rule-btn" id="jrb-2n" onclick="setRule(2,'no')">NO</div>
+        </div>
+      </div>
+      <div class="jnl-rule" id="jr-3">
+        <div class="jnl-rule-label">Rule 3: Volume 7M+ at support?</div>
+        <div class="jnl-rule-btns">
+          <div class="jnl-rule-btn" id="jrb-3y" onclick="setRule(3,'yes')">YES</div>
+          <div class="jnl-rule-btn" id="jrb-3n" onclick="setRule(3,'no')">NO</div>
+        </div>
+      </div>
+      <div class="jnl-rule" id="jr-4">
+        <div class="jnl-rule-label">Rule 4: QML level hit?</div>
+        <div class="jnl-rule-btns">
+          <div class="jnl-rule-btn" id="jrb-4y" onclick="setRule(4,'yes')">YES</div>
+          <div class="jnl-rule-btn" id="jrb-4n" onclick="setRule(4,'no')">NO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTO VERDICT -->
+    <div class="jnl-verdict partial" id="jnl-verdict">&#9672; Answer all 4 rules to get system verdict</div>
+
+    <!-- NOTES -->
+    <div style="margin-bottom:12px;">
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:5px;">TRADE NOTES</div>
+      <textarea id="jf-notes" style="width:100%;min-height:60px;resize:vertical;font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--border2);color:#fff;border-radius:4px;padding:8px;outline:none;line-height:1.6;" placeholder="Why did you take this trade? What did you observe? Volume dry? Bolt candle? Pivot hold?"></textarea>
+    </div>
+
+    <button class="btn-add-trade" onclick="addTrade()">&#10010; Add Trade to Journal</button>
+  </div>
+
+  <!-- TRADE LOG -->
+  <div class="jnl-log">
+    <div class="jnl-log-head">
+      <span class="panel-title">Trade Log</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-csv" onclick="exportJournalCSV()">&#11015; Export CSV</button>
+        <button class="btn-xlsx" onclick="exportJournalXLSX()">&#11015; Excel</button>
+        <button class="btn-clear" onclick="clearJournal()" style="background:rgba(231,76,60,0.1);color:var(--bear);border:1px solid rgba(231,76,60,0.2);padding:5px 10px;font-size:9px;">Clear All</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="jnl-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Date</th><th>Sector</th><th>Dir</th>
+            <th>Entry</th><th>Exit</th><th>SL</th><th>Units</th>
+            <th>P&amp;L</th><th>R:R</th><th>System</th><th>Status</th><th>Del</th>
+          </tr>
+        </thead>
+        <tbody id="jnl-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB: EOD IMPORT -->
+<div class="tab-panel" id="tab-eod">
+<style>
+.eod-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.eod-section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.eod-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.eod-drop{border:2px dashed var(--border2);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;}
+.eod-drop:hover{border-color:var(--q);background:rgba(124,106,240,0.05);}
+.eod-drop.dragover{border-color:var(--m);background:rgba(26,184,122,0.08);}
+.eod-drop-icon{font-size:32px;margin-bottom:8px;}
+.eod-drop-text{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8;}
+.eod-drop-text b{color:#fff;}
+.eod-status{background:var(--bg3);border-radius:6px;padding:12px 14px;margin-bottom:12px;font-family:var(--mono);font-size:10px;}
+.eod-status-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.eod-status-row:last-child{border-bottom:none;}
+.eod-status-key{color:var(--muted);}
+.eod-status-val{color:#fff;font-weight:600;}
+.eod-status-val.bull{color:var(--bull);}
+.eod-status-val.bear{color:var(--bear);}
+.eod-status-val.neut{color:var(--neutral);}
+.btn-import{background:var(--q);color:#fff;width:100%;font-size:12px;padding:12px;margin-top:4px;}
+.btn-import:hover{background:#6b5de0;}
+.btn-clear-eod{background:rgba(231,76,60,0.1);color:var(--bear);border:1px solid rgba(231,76,60,0.2);width:100%;margin-top:8px;}
+
+/* HOLIDAY TOGGLE */
+.holiday-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:6px;margin-bottom:10px;}
+.holiday-label{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.toggle{position:relative;width:44px;height:22px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;transition:.3s;}
+.toggle-slider:before{content:'';position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:var(--muted);border-radius:50%;transition:.3s;}
+.toggle input:checked + .toggle-slider{background:rgba(231,76,60,0.2);border-color:var(--bear);}
+.toggle input:checked + .toggle-slider:before{transform:translateX(22px);background:var(--bear);}
+
+/* PREVIEW TABLE */
+.eod-preview{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+.eod-table{width:100%;border-collapse:collapse;}
+.eod-table th{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.eod-table td{padding:6px 10px;font-family:var(--mono);font-size:10px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.eod-table tr:hover td{background:rgba(255,255,255,0.02);}
+.range-bull{color:var(--bull);}
+.range-bear{color:var(--bear);}
+.range-neut{color:var(--neutral);}
+
+/* COLUMN MAPPER */
+.col-map{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.col-map-item{display:flex;flex-direction:column;gap:4px;}
+.col-map-item label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;}
+.col-map-item select{padding:4px 6px;font-size:10px;}
+</style>
+
+<div style="padding:4px 0 14px;">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+    &#11015; EOD DATA IMPORT &mdash; GOOGLE SHEETS CSV &middot; AFTER 3PM SESSION CLOSE
+  </div>
+
+  <div class="eod-grid">
+
+    <!-- LEFT: IMPORT -->
+    <div class="eod-section">
+      <div class="eod-title" style="color:var(--q);">&#9670; Import EOD Data</div>
+
+      <!-- HOLIDAY TOGGLE -->
+      <div class="holiday-row">
+        <div>
+          <div class="holiday-label">&#127974; Nepal Public Holiday / Market Closed</div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px;">Toggle ON to skip today's update</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="holiday-toggle" onchange="checkHoliday()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- LAST UPDATE STATUS -->
+      <div class="eod-status">
+        <div class="eod-status-row"><span class="eod-status-key">Last Import</span><span class="eod-status-val neut" id="eod-last-import">Never</span></div>
+        <div class="eod-status-row"><span class="eod-status-key">Scrips Loaded</span><span class="eod-status-val" id="eod-scrips-count">0</span></div>
+        <div class="eod-status-row"><span class="eod-status-key">Session Status</span><span class="eod-status-val bull" id="eod-session-status">Ready for import</span></div>
+        <div class="eod-status-row"><span class="eod-status-key">Market Day</span><span class="eod-status-val" id="eod-market-day">—</span></div>
+      </div>
+
+      <!-- DRAG DROP AREA -->
+      <div class="eod-drop" id="eod-drop-zone"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleDrop(event)"
+        onclick="document.getElementById('eod-file-input').click()">
+        <div class="eod-drop-icon">&#128194;</div>
+        <div class="eod-drop-text">
+          <b>Click or drag your CSV file here</b><br>
+          Export from Google Sheets after 3pm<br>
+          File &rarr; Download &rarr; CSV (.csv)<br>
+          <span style="color:var(--q);margin-top:6px;display:block;">Supports: Scrip, O, H, L, C, Volume, Range, Range%</span>
+        </div>
+      </div>
+      <input type="file" id="eod-file-input" accept=".csv" style="display:none;" onchange="handleFileInput(this)">
+
+      <!-- COLUMN MAPPER -->
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Column Format (Auto-detected)</div>
+      <div style="background:var(--bg3);border-radius:5px;padding:10px 14px;margin-bottom:12px;font-family:var(--mono);font-size:9px;line-height:2;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
+          <div><span style="color:var(--muted);">A</span> &rarr; S.No</div>
+          <div><span style="color:var(--q);">B</span> &rarr; Symbol</div>
+          <div><span style="color:var(--q);">C</span> &rarr; LTP/Close</div>
+          <div><span style="color:var(--muted);">D</span> &rarr; Pt Change</div>
+          <div><span style="color:var(--muted);">E</span> &rarr; % Change</div>
+          <div><span style="color:var(--q);">F</span> &rarr; Open</div>
+          <div><span style="color:var(--q);">G</span> &rarr; High</div>
+          <div><span style="color:var(--q);">H</span> &rarr; Low</div>
+          <div><span style="color:var(--q);">I</span> &rarr; Volume</div>
+          <div><span style="color:var(--muted);">J</span> &rarr; Prev.Close</div>
+        </div>
+        <div style="margin-top:8px;color:var(--m);">&#9432; Matched to your Google Sheet exactly &middot; Close = LTP</div>
+      </div>
+
+      <button class="btn-import" id="btn-import" onclick="processImport()" disabled>&#11015; Import EOD Data</button>
+      <button class="btn-clear-eod" onclick="clearEOD()">&#8635; Clear Imported Data</button>
+    </div>
+
+    <!-- RIGHT: HOW TO -->
+    <div class="eod-section">
+      <div class="eod-title" style="color:var(--m);">&#9670; How To Export from Google Sheets</div>
+
+      <div style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--text);">
+        <div style="color:var(--q);font-weight:700;margin-bottom:8px;">Every day after 3pm:</div>
+        <div style="padding:8px 12px;background:var(--bg3);border-radius:5px;margin-bottom:10px;line-height:2;">
+          <span style="color:var(--l);">1.</span> Open your Google Sheet<br>
+          <span style="color:var(--l);">2.</span> Click <b>File</b> menu<br>
+          <span style="color:var(--l);">3.</span> Click <b>Download</b><br>
+          <span style="color:var(--l);">4.</span> Click <b>Comma Separated Values (.csv)</b><br>
+          <span style="color:var(--l);">5.</span> File saves to Downloads folder<br>
+          <span style="color:var(--l);">6.</span> Come back here → drag that file in<br>
+          <span style="color:var(--l);">7.</span> Click Import ✅
+        </div>
+
+        <div style="color:var(--q);font-weight:700;margin-bottom:8px;">Nepal Market Schedule:</div>
+        <div style="padding:8px 12px;background:var(--bg3);border-radius:5px;margin-bottom:10px;line-height:2;">
+          <span style="color:var(--bull);">&#9679;</span> Trading days: Mon–Fri<br>
+          <span style="color:var(--bear);">&#9679;</span> Closed: Sat, Sun + Public holidays<br>
+          <span style="color:var(--neutral);">&#9679;</span> Session close: 3:00 PM NPT<br>
+          <span style="color:var(--neutral);">&#9679;</span> EOD data ready: After 3:05 PM
+        </div>
+
+        <div style="color:var(--q);font-weight:700;margin-bottom:8px;">Expected CSV format:</div>
+        <div style="padding:8px 12px;background:var(--bg);border-radius:5px;font-size:9px;color:var(--m);border:1px solid var(--border);">
+          S.No,Symbol,LTP,Pt Change,% Change,Open,High,Low,Volume,Prev.Close<br>
+          1,ACLBSL,925,-17.2,-1.83,916,942.9,916,512,942.7<br>
+          2,ADBL,307,0.2,0.07,310,310,304,10218,306.8<br>
+          3,EBL,700,2,0.29,701,709,700,14095,698
+        </div>
+
+        <div style="margin-top:12px;padding:10px 12px;background:rgba(124,106,240,0.08);border:1px solid rgba(124,106,240,0.2);border-radius:5px;font-size:9px;line-height:1.8;">
+          <span style="color:var(--q);font-weight:700;">Range = High - Close</span><br>
+          Small range + high volume = strong close (bolt candle)<br>
+          Large range + high volume = distribution (bearish)<br>
+          Small range + low volume = dry phase (accumulation)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW TABLE -->
+  <div class="eod-preview" id="eod-preview" style="display:none;">
+    <div class="panel-head">
+      <span class="panel-title">EOD Data Preview</span>
+      <span class="panel-badge" id="eod-preview-count">0 scrips loaded</span>
+    </div>
+    <div style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+      <table class="eod-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Scrip</th><th>Open</th><th>High</th><th>Low</th>
+            <th>Close</th><th>Volume</th><th>Range (H-C)</th><th>Range %</th><th>Signal</th>
+          </tr>
+        </thead>
+        <tbody id="eod-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB: WEEKLY UPDATE CHECKLIST -->
+<div class="tab-panel" id="tab-weekly">
+<style>
+.wk-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.wk-section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.wk-section-title{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.wk-item{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:5px;
+  margin-bottom:6px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);
+  transition:all .15s;}
+.wk-item:hover{border-color:var(--border2);}
+.wk-item.done{background:rgba(46,204,113,0.08);border-color:rgba(46,204,113,0.25);}
+.wk-item.done .wk-check{background:var(--bull);border-color:var(--bull);}
+.wk-item.done .wk-check::after{content:'✓';color:#000;font-size:9px;font-weight:700;}
+.wk-item.done .wk-text{color:var(--bull);}
+.wk-check{width:18px;height:18px;border-radius:3px;border:1px solid var(--border2);
+  background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:10px;}
+.wk-text{font-family:var(--mono);font-size:10px;color:var(--muted);flex:1;}
+.wk-badge{font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:2px;
+  background:rgba(124,106,240,0.12);color:var(--q);border:1px solid rgba(124,106,240,0.2);}
+
+.wk-progress{margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;padding:16px;text-align:center;}
+.wk-progress-title{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:12px;}
+.wk-big{font-size:42px;font-weight:700;letter-spacing:2px;line-height:1;}
+.wk-bar-bg{height:8px;background:var(--bg3);border-radius:4px;margin:12px 0 6px;overflow:hidden;}
+.wk-bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.wk-status{font-family:var(--mono);font-size:10px;margin-top:4px;}
+
+.wk-notes{width:100%;min-height:80px;resize:vertical;font-family:var(--mono);
+  font-size:11px;background:var(--bg3);border:1px solid var(--border2);
+  color:#fff;border-radius:4px;padding:8px 10px;outline:none;line-height:1.6;}
+.wk-notes:focus{border-color:var(--q);}
+
+.btn-reset-wk{background:rgba(255,255,255,0.05);color:var(--muted);
+  border:1px solid var(--border2);margin-top:8px;}
+.btn-reset-wk:hover{background:rgba(255,255,255,0.1);}
+.btn-export-wk{background:rgba(26,184,122,0.15);color:var(--m);
+  border:1px solid rgba(26,184,122,0.3);margin-top:8px;margin-left:8px;}
+.btn-export-wk:hover{background:rgba(26,184,122,0.28);}
+
+.wk-week-label{font-family:var(--mono);font-size:11px;color:#fff;font-weight:600;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:4px;
+  padding:6px 10px;margin-bottom:14px;width:100%;}
+</style>
+
+<div style="padding:4px 0 14px;">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;
+    padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:14px;">
+    &#9745; WEEKLY UPDATE CHECKLIST &mdash; EVERY SUNDAY AFTER MARKET CLOSE
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="wk-progress">
+    <div class="wk-progress-title">Weekly Completion</div>
+    <div class="wk-big" id="wk-pct" style="color:var(--neutral);">0%</div>
+    <div class="wk-bar-bg"><div class="wk-bar-fill" id="wk-bar" style="width:0%;background:var(--neutral);"></div></div>
+    <div class="wk-status" id="wk-status" style="color:var(--muted);">0 of 12 tasks completed</div>
+  </div>
+
+  <!-- WEEK LABEL -->
+  <input class="wk-week-label" id="wk-week" placeholder="Week of: e.g. 30 Jun – 4 Jul 2026" 
+    oninput="saveWkNotes()">
+
+  <div class="wk-grid">
+
+    <!-- DATA UPDATE -->
+    <div class="wk-section">
+      <div class="wk-section-title" style="color:var(--q);">&#9670; Data Update</div>
+      <div class="wk-item" id="wi-1" onclick="toggleWk(1)">
+        <div class="wk-check" id="wc-1"></div>
+        <span class="wk-text">Weekly OHLC entered</span>
+        <span class="wk-badge">Edit Inputs</span>
+      </div>
+      <div class="wk-item" id="wi-2" onclick="toggleWk(2)">
+        <div class="wk-check" id="wc-2"></div>
+        <span class="wk-text">Weekly pivot (P) calculated</span>
+        <span class="wk-badge">P = (H+L+C)/3</span>
+      </div>
+      <div class="wk-item" id="wi-3" onclick="toggleWk(3)">
+        <div class="wk-check" id="wc-3"></div>
+        <span class="wk-text">DPO 21 value updated</span>
+        <span class="wk-badge">Cycle check</span>
+      </div>
+      <div class="wk-item" id="wi-4" onclick="toggleWk(4)">
+        <div class="wk-check" id="wc-4"></div>
+        <span class="wk-text">Weekly volume noted</span>
+        <span class="wk-badge">7B/7M rule</span>
+      </div>
+      <div class="wk-item" id="wi-5" onclick="toggleWk(5)">
+        <div class="wk-check" id="wc-5"></div>
+        <span class="wk-text">QML levels reviewed &amp; adjusted</span>
+        <span class="wk-badge">Level Manager</span>
+      </div>
+    </div>
+
+    <!-- SIGNAL CHECK -->
+    <div class="wk-section">
+      <div class="wk-section-title" style="color:var(--m);">&#9670; Signal Check</div>
+      <div class="wk-item" id="wi-6" onclick="toggleWk(6)">
+        <div class="wk-check" id="wc-6"></div>
+        <span class="wk-text">Signal Engine calculated</span>
+        <span class="wk-badge">&#9889; Signal tab</span>
+      </div>
+      <div class="wk-item" id="wi-7" onclick="toggleWk(7)">
+        <div class="wk-check" id="wc-7"></div>
+        <span class="wk-text">First candle pivot bias noted</span>
+        <span class="wk-badge">Above/Below P</span>
+      </div>
+      <div class="wk-item" id="wi-8" onclick="toggleWk(8)">
+        <div class="wk-check" id="wc-8"></div>
+        <span class="wk-text">Volume dry or spike confirmed</span>
+        <span class="wk-badge">2603–2611 zone</span>
+      </div>
+      <div class="wk-item" id="wi-9" onclick="toggleWk(9)">
+        <div class="wk-check" id="wc-9"></div>
+        <span class="wk-text">HydroPower sector bias checked</span>
+        <span class="wk-badge">Sector drag?</span>
+      </div>
+    </div>
+
+    <!-- PUBLISH -->
+    <div class="wk-section">
+      <div class="wk-section-title" style="color:var(--l);">&#9670; Publish &amp; Share</div>
+      <div class="wk-item" id="wi-10" onclick="toggleWk(10)">
+        <div class="wk-check" id="wc-10"></div>
+        <span class="wk-text">Dashboard exported (CSV/HTML)</span>
+        <span class="wk-badge">Export bar</span>
+      </div>
+      <div class="wk-item" id="wi-11" onclick="toggleWk(11)">
+        <div class="wk-check" id="wc-11"></div>
+        <span class="wk-text">Tiiny.host file updated</span>
+        <span class="wk-badge">qml-v2.tiiny.site</span>
+      </div>
+      <div class="wk-item" id="wi-12" onclick="toggleWk(12)">
+        <div class="wk-check" id="wc-12"></div>
+        <span class="wk-text">Video / post published</span>
+        <span class="wk-badge">YouTube · TikTok</span>
+      </div>
+    </div>
+
+    <!-- WEEKLY NOTES -->
+    <div class="wk-section">
+      <div class="wk-section-title" style="color:var(--muted);">&#9670; Weekly Notes</div>
+      <textarea class="wk-notes" id="wk-notes" 
+        placeholder="This week's observations&#10;Key levels to watch&#10;Sector notes&#10;Gann time cycle count..."
+        oninput="saveWkNotes()"></textarea>
+      <div style="margin-top:10px;">
+        <button class="btn-reset-wk" onclick="resetChecklist()">&#8635; Reset Checklist</button>
+        <button class="btn-export-wk" onclick="exportWeekly()">&#11015; Export Week Summary</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<div class="footer">
+  <a class="footer-link" href="https://tradewibes.blogspot.com" target="_blank">tradewibes.blogspot.com</a>
+  <div class="footer-time">QML DASHBOARD v2.0 &middot; TRADE WITH VIBES &middot; DATA: SHAREHUBNEPAL.COM</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var presets={
+  NEPSE:{
+    state:{ticker:'NEPSE',date:'2025-12-11',open:2608.10,high:2611.99,low:2601.50,close:2607.37,vol:'-3.498B',chg:'-1.66 (-0.06%)',rsi:51.25,wma:49.12,dpo:30.59,seb:2649.03,dc89:2653.67,ichimoku:'below',w52h:3028.79,w52l:2200.00,entryLo:2600,entryHi:2607.37,sl:2487.17,t1lo:2653,t1hi:2659,t2lo:2689,t2hi:2700,scenB:2487.17,sigQ:'Downtrend from 3,028',sigM:'Below all M levels',sigL:'Inside L range',sigSEB:'Below 2,649 · Bearish',sigDC:'Below midline'},
+    levels:[{tier:'Q',type:'Res',price:3028.79,conf:'52W HIGH',confClass:'conf-hi',note:'Absolute Q ceiling — 52W High'},{tier:'Q',type:'Res',price:3002.07,conf:'Q+M',confClass:'conf-hi',note:'Prior cycle top cluster'},{tier:'Q',type:'Res',price:2980.19,conf:'Q',confClass:'conf-hi',note:'Quarterly swing high'},{tier:'M',type:'Res',price:2689.33,conf:'M+SEB',confClass:'conf-md',note:'Monthly swing + SEB 21'},{tier:'M',type:'Res',price:2659.13,conf:'M+DC89',confClass:'conf-md',note:'SEB mid + DC-89 midline'},{tier:'M',type:'Res',price:2653.67,conf:'M+ICH',confClass:'conf-md',note:'Ichimoku cloud base'},{tier:'L',type:'Res',price:2632.96,conf:'L+DeMark',confClass:'conf-lo',note:'Local swing high · DeMark pivot'},{tier:'L',type:'Sup',price:2600.00,conf:'L',confClass:'conf-lo',note:'Local swing low · round number'},{tier:'M',type:'Sup',price:2487.17,conf:'M+Q',confClass:'conf-md',note:'M-Q confluence strong support'}]
+  },
+  HYDROPOWER:{
+    state:{ticker:'HYDROPOWER',date:'2025-11-03',open:3414.32,high:3424.45,low:3353.93,close:3374.88,vol:'N/A',chg:'-35.89 (-1.05%)',rsi:38.50,wma:42.00,dpo:-95.40,seb:3703.50,dc89:3609.76,ichimoku:'below',w52h:4152.31,w52l:3118.72,entryLo:3353,entryHi:3375,sl:3118.72,t1lo:3609,t1hi:3703,t2lo:3800,t2hi:3900,scenB:3118.72,sigQ:'Sharp downtrend from 4,152 high',sigM:'Below all M levels · 4-MA confluence below',sigL:'Testing local low · capitulation zone',sigSEB:'Below 3,703 · Strongly Bearish',sigDC:'Approaching DC-89 support 3,609'},
+    levels:[{tier:'Q',type:'Res',price:4152.31,conf:'52W HIGH',confClass:'conf-hi',note:'Absolute Q ceiling — 52W High'},{tier:'Q',type:'Res',price:4129.68,conf:'Q',confClass:'conf-hi',note:'Quarterly swing high cluster'},{tier:'M',type:'Res',price:3800.92,conf:'M',confClass:'conf-md',note:'Monthly swing high · prior support turned resistance'},{tier:'M',type:'Res',price:3738.67,conf:'M+SEB',confClass:'conf-md',note:'Red MA + SEB confluence'},{tier:'M',type:'Res',price:3703.50,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:3609.76,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline — green MA'},{tier:'L',type:'Sup',price:3608.74,conf:'L+M+TRIPLE',confClass:'conf-lo',note:'Triple MA confluence (white+red+yellow) — major battle zone'},{tier:'M',type:'Sup',price:3147.74,conf:'M',confClass:'conf-md',note:'Monthly swing low'},{tier:'Q',type:'Sup',price:3118.72,conf:'Q',confClass:'conf-hi',note:'52W Low — Quarterly floor'}]
+  },
+  EBL:{
+    state:{ticker:'EBL',date:'2026-07-04',open:701.00,high:709.00,low:700.00,close:700.00,vol:'14,095',chg:'0.00 (0.00%)',rsi:42.00,wma:44.00,dpo:-8.50,seb:740.00,dc89:720.00,ichimoku:'below',w52h:850.00,w52l:620.00,entryLo:700,entryHi:705,sl:620,t1lo:720,t1hi:740,t2lo:780,t2hi:820,scenB:620,sigQ:'Below Q high 850',sigM:'Below M levels',sigL:'At L support 700 — dry phase',sigSEB:'Below SEB 740',sigDC:'Below DC-89 720'},
+    levels:[{tier:'Q',type:'Res',price:850.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling 52W high'},{tier:'M',type:'Res',price:780.00,conf:'M',confClass:'conf-md',note:'Monthly swing high'},{tier:'M',type:'Res',price:740.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:720.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:700.00,conf:'L+ROUND',confClass:'conf-lo',note:'Local low + round number — key support'},{tier:'Q',type:'Sup',price:620.00,conf:'Q',confClass:'conf-hi',note:'52W Low — Q floor'}]
+  },
+  NABIL:{
+    state:{ticker:'NABIL',date:'2026-07-04',open:525.00,high:541.00,low:519.00,close:530.00,vol:'114,343',chg:'+5.00 (+0.95%)',rsi:45.00,wma:44.00,dpo:-12.00,seb:560.00,dc89:545.00,ichimoku:'below',w52h:680.00,w52l:480.00,entryLo:519,entryHi:530,sl:480,t1lo:545,t1hi:560,t2lo:600,t2hi:640,scenB:480,sigQ:'Below Q high 680',sigM:'Below M levels',sigL:'Testing L support 519-530',sigSEB:'Below SEB 560',sigDC:'Below DC-89 545'},
+    levels:[{tier:'Q',type:'Res',price:680.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling 52W high'},{tier:'M',type:'Res',price:620.00,conf:'M',confClass:'conf-md',note:'Monthly swing high'},{tier:'M',type:'Res',price:560.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:545.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:519.00,conf:'L',confClass:'conf-lo',note:'Local swing low — today low'},{tier:'Q',type:'Sup',price:480.00,conf:'Q',confClass:'conf-hi',note:'52W Low — Q floor'}]
+  },
+  BANKING:{
+    state:{ticker:'BANKING',date:'2025-12-11',open:1380.00,high:1392.50,low:1371.00,close:1385.20,vol:'N/A',chg:'+5.20 (+0.38%)',rsi:52.00,wma:50.10,dpo:12.40,seb:1420.00,dc89:1398.00,ichimoku:'inside',w52h:1650.00,w52l:1180.00,entryLo:1371,entryHi:1385,sl:1180,t1lo:1420,t1hi:1450,t2lo:1520,t2hi:1580,scenB:1180,sigQ:'Below Q high 1,650',sigM:'Testing M resistance 1,420',sigL:'Above L low holding',sigSEB:'Near SEB — watch closely',sigDC:'Near DC-89 midline'},
+    levels:[{tier:'Q',type:'Res',price:1650.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling 52W high'},{tier:'Q',type:'Res',price:1580.00,conf:'Q',confClass:'conf-hi',note:'Q swing high'},{tier:'M',type:'Res',price:1450.00,conf:'M+SEB',confClass:'conf-md',note:'Monthly resistance + SEB'},{tier:'M',type:'Res',price:1420.00,conf:'M',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:1398.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:1371.00,conf:'L',confClass:'conf-lo',note:'Local swing low'},{tier:'Q',type:'Sup',price:1180.00,conf:'Q',confClass:'conf-hi',note:'52W Low — Q floor'}]
+  },
+  DEVBANK:{
+    state:{ticker:'DEVBANK',date:'2025-12-11',open:920.00,high:935.00,low:912.00,close:928.50,vol:'N/A',chg:'+8.50 (+0.92%)',rsi:49.50,wma:48.00,dpo:5.20,seb:960.00,dc89:942.00,ichimoku:'below',w52h:1120.00,w52l:780.00,entryLo:912,entryHi:928,sl:780,t1lo:960,t1hi:990,t2lo:1050,t2hi:1100,scenB:780,sigQ:'Below Q levels',sigM:'Approaching M resistance',sigL:'L structure mixed',sigSEB:'Below SEB band',sigDC:'Below DC-89'},
+    levels:[{tier:'Q',type:'Res',price:1120.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling 52W high'},{tier:'M',type:'Res',price:990.00,conf:'M',confClass:'conf-md',note:'Monthly swing high'},{tier:'M',type:'Res',price:960.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 zone'},{tier:'L',type:'Res',price:942.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:912.00,conf:'L',confClass:'conf-lo',note:'Local swing low'},{tier:'Q',type:'Sup',price:780.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  FINANCE:{
+    state:{ticker:'FINANCE',date:'2025-12-11',open:840.00,high:852.00,low:832.00,close:845.60,vol:'N/A',chg:'+5.60 (+0.67%)',rsi:50.50,wma:49.00,dpo:8.30,seb:880.00,dc89:860.00,ichimoku:'below',w52h:1050.00,w52l:710.00,entryLo:832,entryHi:845,sl:710,t1lo:880,t1hi:920,t2lo:980,t2hi:1020,scenB:710,sigQ:'Below Q high 1,050',sigM:'Below M levels',sigL:'Inside L range',sigSEB:'Below SEB 880',sigDC:'Below DC-89 860'},
+    levels:[{tier:'Q',type:'Res',price:1050.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:920.00,conf:'M',confClass:'conf-md',note:'Monthly swing high'},{tier:'M',type:'Res',price:880.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:860.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:832.00,conf:'L',confClass:'conf-lo',note:'Local swing low'},{tier:'Q',type:'Sup',price:710.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  MICROFINANCE:{
+    state:{ticker:'MICROFINANCE',date:'2025-12-11',open:1520.00,high:1545.00,low:1508.00,close:1532.00,vol:'N/A',chg:'+12.00 (+0.79%)',rsi:47.00,wma:46.00,dpo:-18.50,seb:1620.00,dc89:1580.00,ichimoku:'below',w52h:2100.00,w52l:1350.00,entryLo:1508,entryHi:1532,sl:1350,t1lo:1580,t1hi:1620,t2lo:1750,t2hi:1850,scenB:1350,sigQ:'Deep downtrend from 2,100',sigM:'Below all M levels',sigL:'Testing local support',sigSEB:'Well below SEB 1,620',sigDC:'Below DC-89 1,580'},
+    levels:[{tier:'Q',type:'Res',price:2100.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling 52W high'},{tier:'Q',type:'Res',price:1950.00,conf:'Q',confClass:'conf-hi',note:'Q swing high'},{tier:'M',type:'Res',price:1750.00,conf:'M',confClass:'conf-md',note:'Monthly resistance'},{tier:'M',type:'Res',price:1620.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:1580.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:1508.00,conf:'L',confClass:'conf-lo',note:'Local swing low'},{tier:'Q',type:'Sup',price:1350.00,conf:'Q',confClass:'conf-hi',note:'52W Low — Q floor'}]
+  },
+  NONLIFEINSU:{
+    state:{ticker:'NONLIFEINSU',date:'2025-12-11',open:6820.00,high:6890.00,low:6750.00,close:6840.00,vol:'N/A',chg:'+20.00 (+0.29%)',rsi:54.00,wma:52.00,dpo:35.00,seb:7100.00,dc89:6950.00,ichimoku:'below',w52h:8200.00,w52l:5800.00,entryLo:6750,entryHi:6840,sl:5800,t1lo:6950,t1hi:7100,t2lo:7500,t2hi:7800,scenB:5800,sigQ:'Below Q high 8,200',sigM:'Below M cluster',sigL:'Inside L range holding',sigSEB:'Below SEB 7,100',sigDC:'Below DC-89 6,950'},
+    levels:[{tier:'Q',type:'Res',price:8200.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:7800.00,conf:'M',confClass:'conf-md',note:'Monthly swing high'},{tier:'M',type:'Res',price:7100.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21 band'},{tier:'L',type:'Res',price:6950.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89 midline'},{tier:'L',type:'Sup',price:6750.00,conf:'L',confClass:'conf-lo',note:'Local swing low'},{tier:'Q',type:'Sup',price:5800.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  LIFEINSU:{
+    state:{ticker:'LIFEINSU',date:'2025-12-11',open:7200.00,high:7280.00,low:7140.00,close:7220.00,vol:'N/A',chg:'+20.00 (+0.28%)',rsi:51.00,wma:49.50,dpo:22.00,seb:7500.00,dc89:7350.00,ichimoku:'below',w52h:9100.00,w52l:6200.00,entryLo:7140,entryHi:7220,sl:6200,t1lo:7350,t1hi:7500,t2lo:7800,t2hi:8200,scenB:6200,sigQ:'Downtrend from 9,100',sigM:'Below M levels',sigL:'L range intact',sigSEB:'Below SEB 7,500',sigDC:'Below DC-89 7,350'},
+    levels:[{tier:'Q',type:'Res',price:9100.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:8200.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:7500.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:7350.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:7140.00,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:6200.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  HOTELS:{
+    state:{ticker:'HOTELS',date:'2025-12-11',open:1980.00,high:2020.00,low:1965.00,close:1995.00,vol:'N/A',chg:'+15.00 (+0.76%)',rsi:53.00,wma:51.00,dpo:18.00,seb:2100.00,dc89:2040.00,ichimoku:'below',w52h:2450.00,w52l:1720.00,entryLo:1965,entryHi:1995,sl:1720,t1lo:2040,t1hi:2100,t2lo:2200,t2hi:2300,scenB:1720,sigQ:'Below Q 2,450',sigM:'Testing M resistance',sigL:'Inside L range',sigSEB:'Below SEB 2,100',sigDC:'Below DC-89 2,040'},
+    levels:[{tier:'Q',type:'Res',price:2450.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:2300.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:2100.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:2040.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:1965.00,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:1720.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  TRADING:{
+    state:{ticker:'TRADING',date:'2025-12-11',open:148.00,high:152.00,low:146.00,close:149.50,vol:'N/A',chg:'+1.50 (+1.01%)',rsi:48.00,wma:47.00,dpo:-4.20,seb:162.00,dc89:155.00,ichimoku:'below',w52h:195.00,w52l:128.00,entryLo:146,entryHi:149,sl:128,t1lo:155,t1hi:162,t2lo:175,t2hi:185,scenB:128,sigQ:'Below Q high 195',sigM:'Below M levels',sigL:'Inside L range',sigSEB:'Below SEB 162',sigDC:'Below DC-89 155'},
+    levels:[{tier:'Q',type:'Res',price:195.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:175.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:162.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:155.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:146.00,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:128.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  MANUFACTURING:{
+    state:{ticker:'MANUFACTURING',date:'2025-12-11',open:3120.00,high:3180.00,low:3090.00,close:3145.00,vol:'N/A',chg:'+25.00 (+0.80%)',rsi:50.00,wma:48.50,dpo:10.50,seb:3320.00,dc89:3220.00,ichimoku:'below',w52h:3850.00,w52l:2700.00,entryLo:3090,entryHi:3145,sl:2700,t1lo:3220,t1hi:3320,t2lo:3500,t2hi:3700,scenB:2700,sigQ:'Below Q 3,850',sigM:'Below M levels',sigL:'L range holding',sigSEB:'Below SEB 3,320',sigDC:'Below DC-89 3,220'},
+    levels:[{tier:'Q',type:'Res',price:3850.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:3500.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:3320.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:3220.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:3090.00,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:2700.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  INVESTMENT:{
+    state:{ticker:'INVESTMENT',date:'2025-12-11',open:38.50,high:39.80,low:37.90,close:38.90,vol:'N/A',chg:'+0.40 (+1.04%)',rsi:46.00,wma:45.00,dpo:-2.80,seb:42.50,dc89:40.80,ichimoku:'below',w52h:52.00,w52l:32.00,entryLo:37.9,entryHi:38.9,sl:32,t1lo:40.8,t1hi:42.5,t2lo:46,t2hi:50,scenB:32,sigQ:'Below Q 52',sigM:'Below M levels',sigL:'Inside L range',sigSEB:'Below SEB 42.5',sigDC:'Below DC-89 40.8'},
+    levels:[{tier:'Q',type:'Res',price:52.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:46.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:42.50,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:40.80,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:37.90,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:32.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  OTHERS:{
+    state:{ticker:'OTHERS',date:'2025-12-11',open:620.00,high:635.00,low:612.00,close:625.00,vol:'N/A',chg:'+5.00 (+0.81%)',rsi:49.00,wma:48.00,dpo:3.50,seb:660.00,dc89:642.00,ichimoku:'below',w52h:780.00,w52l:520.00,entryLo:612,entryHi:625,sl:520,t1lo:642,t1hi:660,t2lo:700,t2hi:740,scenB:520,sigQ:'Below Q 780',sigM:'Below M levels',sigL:'L range intact',sigSEB:'Below SEB 660',sigDC:'Below DC-89 642'},
+    levels:[{tier:'Q',type:'Res',price:780.00,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:700.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:660.00,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:642.00,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:612.00,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:520.00,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  },
+  MUTUALFUND:{
+    state:{ticker:'MUTUALFUND',date:'2025-12-11',open:11.20,high:11.65,low:11.05,close:11.40,vol:'N/A',chg:'+0.20 (+1.79%)',rsi:51.00,wma:49.50,dpo:0.35,seb:12.20,dc89:11.80,ichimoku:'below',w52h:14.50,w52l:9.80,entryLo:11.05,entryHi:11.40,sl:9.80,t1lo:11.80,t1hi:12.20,t2lo:13.00,t2hi:13.80,scenB:9.80,sigQ:'Below Q 14.5',sigM:'Below M levels',sigL:'Inside L range',sigSEB:'Below SEB 12.2',sigDC:'Below DC-89 11.8'},
+    levels:[{tier:'Q',type:'Res',price:14.50,conf:'52W HIGH',confClass:'conf-hi',note:'Q ceiling'},{tier:'M',type:'Res',price:13.00,conf:'M',confClass:'conf-md',note:'M swing high'},{tier:'M',type:'Res',price:12.20,conf:'M+SEB',confClass:'conf-md',note:'SEB 21'},{tier:'L',type:'Res',price:11.80,conf:'L+DC89',confClass:'conf-lo',note:'DC-89'},{tier:'L',type:'Sup',price:11.05,conf:'L',confClass:'conf-lo',note:'Local low'},{tier:'Q',type:'Sup',price:9.80,conf:'Q',confClass:'conf-hi',note:'52W Low'}]
+  }
+};
+
+function loadPreset(name){
+  var p=presets[name];
+  if(!p)return;
+  state=JSON.parse(JSON.stringify(p.state));
+  levels=JSON.parse(JSON.stringify(p.levels));
+  populateEditorFields();
+  renderDashboard();
+  toast(name+' loaded');
+}
+
+function populateEditorFields(){
+  document.getElementById('e-ticker').value=state.ticker;
+  document.getElementById('e-date').value=state.date;
+  document.getElementById('e-open').value=state.open;
+  document.getElementById('e-high').value=state.high;
+  document.getElementById('e-low').value=state.low;
+  document.getElementById('e-close').value=state.close;
+  document.getElementById('e-vol').value=state.vol;
+  document.getElementById('e-chg').value=state.chg;
+  document.getElementById('e-rsi').value=state.rsi;
+  document.getElementById('e-wma').value=state.wma;
+  document.getElementById('e-dpo').value=state.dpo;
+  document.getElementById('e-seb').value=state.seb;
+  document.getElementById('e-dc89').value=state.dc89;
+  document.getElementById('e-ich').value=state.ichimoku;
+  document.getElementById('e-52wh').value=state.w52h;
+  document.getElementById('e-52wl').value=state.w52l;
+  document.getElementById('e-entry-lo').value=state.entryLo;
+  document.getElementById('e-entry-hi').value=state.entryHi;
+  document.getElementById('e-sl').value=state.sl;
+  document.getElementById('e-t1lo').value=state.t1lo;
+  document.getElementById('e-t1hi').value=state.t1hi;
+  document.getElementById('e-t2lo').value=state.t2lo;
+  document.getElementById('e-t2hi').value=state.t2hi;
+  document.getElementById('e-scenb').value=state.scenB;
+  document.getElementById('e-sig-q').value=state.sigQ;
+  document.getElementById('e-sig-m').value=state.sigM;
+  document.getElementById('e-sig-l').value=state.sigL;
+  document.getElementById('e-sig-seb').value=state.sigSEB;
+  document.getElementById('e-sig-dc').value=state.sigDC;
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('active',['dashboard','signal','journal','planner','eod','weekly','editor','levels'][i]===id);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(p){
+    p.classList.toggle('active',p.id==='tab-'+id);
+  });
+  if(id==='levels')renderLevelEditor();
+  if(id==='weekly')loadWkState();
+  if(id==='journal'){loadJournal();setTodayDate();}
+  if(id==='planner'){loadPlans();renderPlansTable();}
+  if(id==='eod')initEOD();
+}
+
+// ══════════════════════════════════════════════
+//  EOD IMPORT
+// ══════════════════════════════════════════════
+var eodData=[];
+var rawCSVRows=[];
+
+function initEOD(){
+  var lastImport=localStorage.getItem('twv_eod_date')||'Never';
+  var count=parseInt(localStorage.getItem('twv_eod_count')||'0');
+  document.getElementById('eod-last-import').textContent=lastImport;
+  document.getElementById('eod-scrips-count').textContent=count;
+  // Market day check
+  var today=new Date();
+  var day=today.getDay(); // 0=Sun,1=Mon...6=Sat
+  // Nepal market: Mon(1)-Fri(5) open, Sat(6) Sun(0) closed
+  var isOpen=[1,2,3,4,5].indexOf(day)>-1;
+  var dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var marketEl=document.getElementById('eod-market-day');
+  marketEl.textContent=dayNames[day]+(isOpen?' — Market Day \u2705':' — Market Closed \u274c');
+  marketEl.className='eod-status-val '+(isOpen?'bull':'bear');
+  // Load saved EOD if exists
+  try{
+    var saved=localStorage.getItem('twv_eod_data');
+    if(saved){
+      eodData=JSON.parse(saved);
+      if(eodData.length>0)renderEODTable();
+    }
+  }catch(e){}
+}
+
+function checkHoliday(){
+  var isHoliday=document.getElementById('holiday-toggle').checked;
+  var sessionEl=document.getElementById('eod-session-status');
+  if(isHoliday){
+    sessionEl.textContent='Public Holiday \u2014 No import needed \ud83c\udf1f';
+    sessionEl.className='eod-status-val bear';
+    document.getElementById('btn-import').disabled=true;
+  } else {
+    sessionEl.textContent='Ready for import';
+    sessionEl.className='eod-status-val bull';
+    if(rawCSVRows.length>0)document.getElementById('btn-import').disabled=false;
+  }
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('eod-drop-zone').classList.remove('dragover');
+  var file=e.dataTransfer.files[0];
+  if(file)readCSVFile(file);
+}
+
+function handleFileInput(input){
+  var file=input.files[0];
+  if(file)readCSVFile(file);
+}
+
+function readCSVFile(file){
+  if(!file.name.match(/\.csv$/i)){toast('\u26a0 Please upload a CSV file');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var text=e.target.result;
+    parseCSV(text);
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  var lines=text.split('\n').filter(function(l){return l.trim();});
+  if(lines.length<2){toast('\u26a0 CSV file appears empty');return;}
+  rawCSVRows=lines.map(function(l){
+    return l.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});
+  });
+  // Check if first row is header
+  var firstRow=rawCSVRows[0];
+  var hasHeader=isNaN(parseFloat(firstRow[1]));
+  if(hasHeader)rawCSVRows=rawCSVRows.slice(1);
+  // Update drop zone
+  var dz=document.getElementById('eod-drop-zone');
+  dz.style.borderColor='var(--m)';
+  dz.style.background='rgba(26,184,122,0.05)';
+  dz.innerHTML='<div class="eod-drop-icon">\u2705</div>'
+    +'<div class="eod-drop-text"><b>'+rawCSVRows.length+' rows loaded</b><br>'
+    +firstRow.join(', ')+'<br><span style="color:var(--m);">Ready to import \u2014 click Import EOD Data</span></div>';
+  if(!document.getElementById('holiday-toggle').checked){
+    document.getElementById('btn-import').disabled=false;
+  }
+  toast('\u2713 CSV loaded \u2014 '+rawCSVRows.length+' rows');
+}
+
+function processImport(){
+  if(!rawCSVRows.length){toast('\u26a0 Load a CSV file first');return;}
+  // HARDCODED for your Google Sheet:
+  // A=0:S.No, B=1:Symbol, C=2:LTP, D=3:Pt Change, E=4:%Change, F=5:Open, G=6:High, H=7:Low, I=8:Volume, J=9:Prev.Close
+  var scCol=1, clCol=2, hiCol=6, loCol=7, opCol=5, vlCol=8, rgCol=-1, rpCol=-1;
+  eodData=[];
+  rawCSVRows.forEach(function(row){
+    if(!row[scCol])return;
+    var scrip=row[scCol].toUpperCase().trim();
+    if(!scrip||scrip==='-'||scrip==='SCRIP'||scrip==='SYMBOL'||scrip==='S.N'||scrip==='SN'||scrip==='NO')return;
+    var close=parseFloat((row[clCol]||'0').replace(/,/g,''))||0;
+    if(!close)return;
+    var open=parseFloat((row[opCol]||'0').replace(/,/g,''))||0;
+    var high=parseFloat((row[hiCol]||'0').replace(/,/g,''))||0;
+    var low=parseFloat((row[loCol]||'0').replace(/,/g,''))||0;
+    var vol=parseFloat((row[vlCol]||'0').replace(/,/g,''))||0;
+    var range=parseFloat((row[rgCol]||'0').replace(/,/g,''))||0;
+    if(!range&&high>0&&low>0) range=high-low;
+    if(!range&&high>0) range=high-close;
+    var rangePct=row[rpCol]||'';
+    if(!rangePct&&range>0&&high>0) rangePct=(range/high*100).toFixed(2)+'%';
+    // also accept H-L as range if provided value matches H-L better
+    var hlRange=high>0&&low>0?high-low:0;
+    var hcRange=high>0&&close>0?high-close:0;
+    if(range>0&&hlRange>0&&Math.abs(range-hlRange)<Math.abs(range-hcRange)) range=hlRange;
+    var signal='';
+    var rangePctNum=parseFloat((rangePct||'0').replace('%',''))||0;
+    if(rangePctNum<0.8&&vol>500000) signal='\u26a1 Bolt candle';
+    else if(rangePctNum>2&&vol>500000) signal='\u26a0 Distribution';
+    else if(vol<50000) signal='\ud83d\udca4 Dry phase';
+    else if(rangePctNum>1.5&&vol>100000) signal='\ud83d\udd34 Wide spread';
+    else signal='\u2015 Normal';
+    eodData.push({scrip:scrip,open:open,high:high,low:low,
+      close:close,vol:vol,range:range,rangePct:rangePct,signal:signal});
+  });
+  if(!eodData.length){toast('\u26a0 No valid data — check CSV format: A=Symbol,B=LTP,C=High,D=Low,E=Open,F=Vol');return;}
+  var now=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  localStorage.setItem('twv_eod_data',JSON.stringify(eodData));
+  localStorage.setItem('twv_eod_date',now);
+  localStorage.setItem('twv_eod_count',eodData.length);
+  document.getElementById('eod-last-import').textContent=now;
+  document.getElementById('eod-scrips-count').textContent=eodData.length;
+  document.getElementById('eod-session-status').textContent='\u2705 '+eodData.length+' scrips imported';
+  document.getElementById('eod-session-status').className='eod-status-val bull';
+  renderEODTable();
+  toast('\u2713 EOD imported \u2014 '+eodData.length+' scrips loaded');
+}
+
+function renderEODTable(){
+  var tbody=document.getElementById('eod-tbody');
+  var preview=document.getElementById('eod-preview');
+  var countEl=document.getElementById('eod-preview-count');
+  if(!tbody||!eodData.length)return;
+  preview.style.display='block';
+  countEl.textContent=eodData.length+' scrips loaded';
+  var html='';
+  eodData.forEach(function(d,i){
+    var rangePctNum=parseFloat((d.rangePct||'0').replace('%',''))||0;
+    var rangeCls=rangePctNum<0.8?'range-bull':rangePctNum>2?'range-bear':'range-neut';
+    var volFmt=d.vol>=1000000000?(d.vol/1000000000).toFixed(2)+'B':d.vol>=1000000?(d.vol/1000000).toFixed(2)+'M':d.vol.toLocaleString();
+    html+='<tr>'
+      +'<td style="color:var(--muted);">'+(i+1)+'</td>'
+      +'<td style="color:#fff;font-weight:600;">'+d.scrip+'</td>'
+      +'<td>'+(d.open?fmt(d.open):'—')+'</td>'
+      +'<td style="color:var(--bull);">'+(d.high?fmt(d.high):'—')+'</td>'
+      +'<td style="color:var(--bear);">'+(d.low?fmt(d.low):'—')+'</td>'
+      +'<td style="color:var(--q);font-weight:700;">'+fmt(d.close)+'</td>'
+      +'<td>'+volFmt+'</td>'
+      +'<td class="'+rangeCls+'">'+(d.range?d.range.toFixed(2):'—')+'</td>'
+      +'<td class="'+rangeCls+'">'+(d.rangePct||'—')+'</td>'
+      +'<td style="font-size:9px;color:var(--muted);">'+d.signal+'</td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function clearEOD(){
+  eodData=[];rawCSVRows=[];
+  localStorage.removeItem('twv_eod_data');
+  localStorage.removeItem('twv_eod_date');
+  localStorage.removeItem('twv_eod_count');
+  document.getElementById('eod-tbody').innerHTML='';
+  document.getElementById('eod-preview').style.display='none';
+  document.getElementById('eod-last-import').textContent='Never';
+  document.getElementById('eod-scrips-count').textContent='0';
+  document.getElementById('eod-session-status').textContent='Ready for import';
+  document.getElementById('eod-session-status').className='eod-status-val bull';
+  document.getElementById('btn-import').disabled=true;
+  var dz=document.getElementById('eod-drop-zone');
+  dz.style.borderColor='';dz.style.background='';
+  dz.innerHTML='<div class="eod-drop-icon">&#128194;</div>'
+    +'<div class="eod-drop-text"><b>Click or drag your CSV file here</b><br>'
+    +'Export from Google Sheets after 3pm<br>File &rarr; Download &rarr; CSV (.csv)</div>';
+  toast('EOD data cleared');
+}
+
+// ══════════════════════════════════════════════
+//  FORWARD PLANNER
+// ══════════════════════════════════════════════
+var plans=[];
+
+function updateRangeBar(){
+  var cur=parseFloat(document.getElementById('fp-cur').value)||0;
+  var hi=parseFloat(document.getElementById('fp-52wh').value)||0;
+  var lo=parseFloat(document.getElementById('fp-52wl').value)||0;
+  if(!cur||!hi||!lo)return;
+  var span=hi-lo;
+  var pctPos=((cur-lo)/span*100);
+  var marker=document.getElementById('fp-cur-marker');
+  var label=document.getElementById('fp-cur-label');
+  var pctEl=document.getElementById('fp-range-pct');
+  var hiLabel=document.getElementById('fp-high-label');
+  var loLabel=document.getElementById('fp-low-label');
+  marker.style.left=Math.min(Math.max(pctPos,2),98)+'%';
+  marker.style.display='block';
+  label.style.left=Math.min(Math.max(pctPos,2),98)+'%';
+  label.style.display='block';
+  label.textContent=fmt(cur);
+  hiLabel.textContent='52W High: '+fmt(hi);
+  loLabel.textContent='52W Low: '+fmt(lo);
+  var pctFromLow=pctPos.toFixed(1);
+  var pctFromHigh=(100-pctPos).toFixed(1);
+  var col=pctPos>60?'var(--bull)':pctPos>40?'var(--neutral)':'var(--bear)';
+  pctEl.innerHTML='<span style="color:'+col+'">'+pctFromLow+'% above 52W Low &nbsp;|&nbsp; '+pctFromHigh+'% below 52W High</span>';
+  // auto QML levels
+  var qLvl=hi;
+  var mLvl=(hi+lo)/2;
+  var lLvl=lo+(span*0.382);
+  document.getElementById('fp-qlvl').textContent=fmt(qLvl);
+  document.getElementById('fp-qdist').textContent=pct(qLvl,cur)+'% away';
+  document.getElementById('fp-qdist').style.color=qLvl>cur?'var(--bull)':'var(--bear)';
+  document.getElementById('fp-mlvl').textContent=fmt(mLvl);
+  document.getElementById('fp-mdist').textContent=pct(mLvl,cur)+'% away';
+  document.getElementById('fp-mdist').style.color=mLvl>cur?'var(--bull)':'var(--bear)';
+  document.getElementById('fp-llvl').textContent=fmt(lLvl);
+  document.getElementById('fp-ldist').textContent=pct(lLvl,cur)+'% away';
+  document.getElementById('fp-ldist').style.color=lLvl>cur?'var(--bull)':'var(--bear)';
+}
+
+function calcGannCycles(){
+  var swDate=document.getElementById('fp-swdate').value;
+  if(!swDate)return;
+  var sw=new Date(swDate);
+  var today=new Date();
+  var cycles=[45,90,180,360];
+  var html='';
+  cycles.forEach(function(days){
+    var target=new Date(sw.getTime()+days*24*60*60*1000);
+    var diff=Math.round((target-today)/(24*60*60*1000));
+    var isPast=diff<0;
+    var isNear=Math.abs(diff)<=7;
+    var cls=isNear?'gann-box active':'gann-box';
+    var distTxt=isPast?Math.abs(diff)+' days ago':diff===0?'TODAY!':diff+' days ahead';
+    var col=isNear?'var(--q)':isPast?'var(--muted)':'var(--text)';
+    html+='<div class="'+cls+'">'
+      +'<div class="gann-days">'+days+' days</div>'
+      +'<div class="gann-date" style="color:'+col+';">'+target.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</div>'
+      +'<div class="gann-dist" style="color:'+(isNear?'var(--q)':'var(--muted)')+';">'+distTxt+(isNear?' &#9889;':'')+'</div>'
+      +'</div>';
+  });
+  document.getElementById('fp-gann-cycles').innerHTML=html;
+}
+
+function calcPlan(){
+  var scrip=document.getElementById('fp-scrip').value;
+  var cur=parseFloat(document.getElementById('fp-cur').value)||0;
+  var hi=parseFloat(document.getElementById('fp-52wh').value)||0;
+  var lo=parseFloat(document.getElementById('fp-52wl').value)||0;
+  var vh=document.getElementById('fp-vh').value;
+  var vl=document.getElementById('fp-vl').value;
+  var vcur=document.getElementById('fp-vcur').value;
+  if(!cur||!hi||!lo){toast('\u26a0 Enter Current Price, 52W High and Low first');return;}
+  var span=hi-lo;
+  var mLvl=(hi+lo)/2;
+  var lLvl=lo+(span*0.382);
+  var pctPos=((cur-lo)/span*100);
+  // Volume analysis
+  var vhEl=document.getElementById('fp-vh-display');
+  var vlEl=document.getElementById('fp-vl-display');
+  var vhSig=document.getElementById('fp-vh-sig');
+  var vlSig=document.getElementById('fp-vl-sig');
+  vhEl.textContent=vh||'—';
+  vlEl.textContent=vl||'—';
+  var vhNum=parseFloat((vh||'0').replace(/[BM]/i,''))||0;
+  var vhIsB=(vh||'').toUpperCase().indexOf('B')>-1;
+  var vlNum=parseFloat((vl||'0').replace(/[BM]/i,''))||0;
+  var vlIsB=(vl||'').toUpperCase().indexOf('B')>-1;
+  if(vhIsB&&vhNum>=5){
+    vhSig.textContent='High vol at top \u2192 Distribution \u25bc';
+    vhSig.style.color='var(--bear)';
+    vhEl.style.color='var(--bear)';
+  } else if(!vhIsB||vhNum<3){
+    vhSig.textContent='Low vol at top \u2192 Weak breakout';
+    vhSig.style.color='var(--neutral)';
+    vhEl.style.color='var(--neutral)';
+  } else {
+    vhSig.textContent='Moderate vol \u2192 Watch closely';
+    vhSig.style.color='var(--neutral)';
+    vhEl.style.color='var(--neutral)';
+  }
+  if(vlNum<2){
+    vlSig.textContent='Low vol at bottom \u2192 Accumulation \u25b2';
+    vlSig.style.color='var(--bull)';
+    vlEl.style.color='var(--bull)';
+  } else if(vlIsB&&vlNum>=5){
+    vlSig.textContent='High vol at bottom \u2192 Panic selling';
+    vlSig.style.color='var(--bear)';
+    vlEl.style.color='var(--bear)';
+  } else {
+    vlSig.textContent='Moderate \u2192 Mixed signal';
+    vlSig.style.color='var(--neutral)';
+    vlEl.style.color='var(--neutral)';
+  }
+  // Bias
+  var bias=pctPos>60?'BULLISH \u25b2':pctPos>40?'NEUTRAL \u2015':'BEARISH \u25bc';
+  var biasCls=pctPos>60?'bull':pctPos>40?'neut':'bear';
+  // Plan calculations
+  var entryBull=cur*(1-0.005); // 0.5% below cur
+  var entryBear=cur*(1+0.005);
+  var slBull=lo+(span*0.236);  // 23.6% fib
+  var slBear=hi-(span*0.236);
+  var t1=mLvl;
+  var t2=hi*(0.95);
+  var rrBull=((t1-entryBull)/(entryBull-slBull)).toFixed(2);
+  var rrBear=((entryBear-t1)/(slBear-entryBear)).toFixed(2);
+  var isBull=pctPos>50;
+  var entry=isBull?entryBull:entryBear;
+  var sl=isBull?slBull:slBear;
+  var rrVal=isBull?rrBull:rrBear;
+  // Daily plan
+  document.getElementById('pp-d-bias').textContent=bias;
+  document.getElementById('pp-d-bias').className='plan-val '+biasCls;
+  document.getElementById('pp-d-watch').textContent=fmt(lLvl)+' L-level';
+  document.getElementById('pp-d-entry').textContent=fmt(entry);
+  document.getElementById('pp-d-sl').textContent=fmt(sl);
+  document.getElementById('pp-d-tgt').textContent=fmt(t1);
+  document.getElementById('pp-d-rr').textContent='1:'+rrVal;
+  // Weekly plan
+  document.getElementById('pp-w-bias').textContent=bias;
+  document.getElementById('pp-w-bias').className='plan-val '+biasCls;
+  document.getElementById('pp-w-watch').textContent=fmt(mLvl)+' M-level';
+  document.getElementById('pp-w-entry').textContent=fmt(entry);
+  document.getElementById('pp-w-sl').textContent=fmt(sl);
+  document.getElementById('pp-w-t1').textContent=fmt(t1);
+  document.getElementById('pp-w-t2').textContent=fmt(t2);
+  document.getElementById('pp-w-rr').textContent='1:'+rrVal;
+  // Monthly plan
+  document.getElementById('pp-m-bias').textContent=bias;
+  document.getElementById('pp-m-bias').className='plan-val '+biasCls;
+  document.getElementById('pp-m-watch').textContent=fmt(hi)+' Q-level';
+  document.getElementById('pp-m-entry').textContent=fmt(entry);
+  document.getElementById('pp-m-sl').textContent=fmt(lo);
+  document.getElementById('pp-m-t1').textContent=fmt(t1);
+  document.getElementById('pp-m-t2').textContent=fmt(hi);
+  document.getElementById('pp-m-rr').textContent='1:'+((hi-entry)/(entry-lo)).toFixed(2);
+  // Gann cycles
+  calcGannCycles();
+  // Update range bar
+  updateRangeBar();
+  // Show plan cards
+  document.getElementById('fp-plan-cards').style.display='block';
+  toast('\u2713 Forward plan calculated for '+scrip);
+}
+
+function savePlan(){
+  var scrip=document.getElementById('fp-scrip').value;
+  var cur=parseFloat(document.getElementById('fp-cur').value)||0;
+  var hi=parseFloat(document.getElementById('fp-52wh').value)||0;
+  var lo=parseFloat(document.getElementById('fp-52wl').value)||0;
+  if(!cur){toast('\u26a0 Calculate plan first');return;}
+  var span=hi-lo;
+  var pctPos=((cur-lo)/span*100);
+  var mLvl=(hi+lo)/2;
+  var lLvl=lo+(span*0.382);
+  var bias=pctPos>60?'BULLISH':pctPos>40?'NEUTRAL':'BEARISH';
+  var entry=pctPos>50?cur*0.995:cur*1.005;
+  var sl=pctPos>50?lo+(span*0.236):hi-(span*0.236);
+  var t1=mLvl;
+  var t2=hi*0.95;
+  var rr=((t1-entry)/(entry-sl)).toFixed(2);
+  var swDate=document.getElementById('fp-swdate').value;
+  var gannNote='';
+  if(swDate){
+    var sw=new Date(swDate);
+    var today=new Date();
+    var d90=new Date(sw.getTime()+90*24*60*60*1000);
+    var diff=Math.round((d90-today)/(24*60*60*1000));
+    gannNote=diff>0?'90d: '+diff+' days':'90d: passed';
+  }
+  var plan={
+    id:Date.now(),
+    date:new Date().toISOString().split('T')[0],
+    scrip:scrip,
+    tf:document.getElementById('fp-tf').value,
+    bias:bias,
+    cur:cur,
+    entry:entry.toFixed(2),
+    sl:sl.toFixed(2),
+    t1:t1.toFixed(2),
+    t2:t2.toFixed(2),
+    rr:rr,
+    rangePct:pctPos.toFixed(1)+'%',
+    gann:gannNote
+  };
+  plans.push(plan);
+  savePlans();
+  renderPlansTable();
+  toast('\u2713 Plan saved — '+scrip);
+}
+
+function deletePlan(id){
+  plans=plans.filter(function(p){return p.id!==id;});
+  savePlans();
+  renderPlansTable();
+  toast('Plan removed');
+}
+
+function savePlans(){
+  try{localStorage.setItem('twv_plans',JSON.stringify(plans));}catch(e){}
+}
+
+function loadPlans(){
+  try{
+    var s=localStorage.getItem('twv_plans');
+    if(s)plans=JSON.parse(s);
+  }catch(e){}
+}
+
+function renderPlansTable(){
+  var tbody=document.getElementById('plans-tbody');
+  if(!tbody)return;
+  if(!plans.length){
+    tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:10px;padding:20px;">No plans saved yet — calculate and save a plan above</td></tr>';
+    return;
+  }
+  var sorted=plans.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var html='';
+  sorted.forEach(function(p,i){
+    var biasCls=p.bias==='BULLISH'?'bull':p.bias==='BEARISH'?'bear':'neut';
+    var tfCls=p.tf==='daily'?'l':p.tf==='weekly'?'m':'q';
+    html+='<tr>'
+      +'<td style="color:var(--muted);">'+(i+1)+'</td>'
+      +'<td style="color:#fff;font-weight:600;">'+p.scrip+'</td>'
+      +'<td style="color:var(--'+tfCls+');">'+p.tf.toUpperCase()+'</td>'
+      +'<td class="'+biasCls+'"><b>'+p.bias+'</b></td>'
+      +'<td>'+fmt(p.cur)+'</td>'
+      +'<td style="color:var(--bull);">'+p.entry+'</td>'
+      +'<td style="color:var(--bear);">'+p.sl+'</td>'
+      +'<td style="color:var(--m);">'+p.t1+'</td>'
+      +'<td style="color:var(--q);">'+p.t2+'</td>'
+      +'<td style="color:var(--q);">1:'+p.rr+'</td>'
+      +'<td style="color:var(--muted);">'+p.rangePct+'</td>'
+      +'<td style="color:var(--muted);font-size:9px;">'+p.gann+'</td>'
+      +'<td><button class="btn-del-trade" onclick="deletePlan('+p.id+')">&#10005;</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html;
+}
+
+function clearPlans(){
+  if(!confirm('Clear ALL saved plans?'))return;
+  plans=[];
+  savePlans();
+  renderPlansTable();
+  toast('Plans cleared');
+}
+
+function exportPlansCSV(){
+  if(!plans.length){toast('No plans to export');return;}
+  var rows=[['TRADE WITH VIBES — Forward Plans Export'],
+    ['Date','Scrip','Timeframe','Bias','Current','Entry','SL','T1','T2','R:R','52W%','Gann']];
+  plans.forEach(function(p){
+    rows.push([p.date,p.scrip,p.tf,p.bias,p.cur,p.entry,p.sl,p.t1,p.t2,p.rr,p.rangePct,p.gann]);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='TWV_Plans_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast('\u2713 Plans exported');
+}
+
+// ══════════════════════════════════════════════
+//  JOURNAL
+// ══════════════════════════════════════════════
+var jRules={1:null,2:null,3:null,4:null};
+var trades=[];
+
+function setTodayDate(){
+  var d=document.getElementById('jf-date');
+  if(d&&!d.value){
+    var now=new Date();
+    d.value=now.toISOString().split('T')[0];
+  }
+}
+
+function setRule(n,val){
+  jRules[n]=val;
+  // update button styles
+  var yBtn=document.getElementById('jrb-'+n+'y');
+  var nBtn=document.getElementById('jrb-'+n+'n');
+  var rule=document.getElementById('jr-'+n);
+  yBtn.className='jnl-rule-btn'+(val==='yes'?' active-yes':'');
+  nBtn.className='jnl-rule-btn'+(val==='no'?' active-no':'');
+  rule.className='jnl-rule'+(val==='yes'?' yes':val==='no'?' no':'');
+  updateVerdict();
+}
+
+function updateVerdict(){
+  var v=document.getElementById('jnl-verdict');
+  var answered=Object.values(jRules).filter(function(r){return r!==null;}).length;
+  if(answered<4){
+    v.textContent='\u9672 Answer all 4 rules to get system verdict';
+    v.className='jnl-verdict partial';
+    return;
+  }
+  var yesCount=Object.values(jRules).filter(function(r){return r==='yes';}).length;
+  var broken=[];
+  var ruleNames=['Close > Pivot','DPO > 0 or rising','Volume 7M+ at support','QML level hit'];
+  Object.keys(jRules).forEach(function(k){
+    if(jRules[k]==='no') broken.push('Rule '+k+': '+ruleNames[k-1]);
+  });
+  if(yesCount===4){
+    v.textContent='\u2705 SYSTEM TRADE — All 4 rules followed. High conviction setup.';
+    v.className='jnl-verdict system';
+  } else if(yesCount>=2){
+    v.textContent='\u26a0 PARTIAL — Broken: '+broken.join(' | ')+'. Reduce size.';
+    v.className='jnl-verdict partial';
+  } else {
+    v.textContent='\u274c RULE BREAK — '+broken.join(' | ')+'. Outside system. Review.';
+    v.className='jnl-verdict broken';
+  }
+}
+
+function calcPosition(){
+  var cap=parseFloat(document.getElementById('pc-capital').value)||0;
+  var riskPct=parseFloat(document.getElementById('pc-risk').value)||0;
+  var entry=parseFloat(document.getElementById('pc-entry').value)||0;
+  var sl=parseFloat(document.getElementById('pc-sl').value)||0;
+  var target=parseFloat(document.getElementById('pc-target').value)||0;
+  if(!cap||!riskPct||!entry||!sl){return;}
+  var riskAmt=cap*(riskPct/100);
+  var riskPerUnit=Math.abs(entry-sl);
+  var units=riskPerUnit>0?Math.floor(riskAmt/riskPerUnit):0;
+  var capUsed=units*entry;
+  var reward=target>0?Math.abs(target-entry):0;
+  var rr=riskPerUnit>0?(reward/riskPerUnit).toFixed(2):'—';
+  document.getElementById('pc-riskamt').textContent='Rs '+fmt(riskAmt);
+  document.getElementById('pc-units').textContent=units.toLocaleString();
+  document.getElementById('pc-rratio').textContent='1:'+rr;
+  document.getElementById('pc-capused').textContent='Rs '+fmt(capUsed);
+}
+
+function addTrade(){
+  var entry=parseFloat(document.getElementById('jf-entry').value)||0;
+  var exit=parseFloat(document.getElementById('jf-exit').value)||0;
+  var sl=parseFloat(document.getElementById('jf-sl').value)||0;
+  var vol=parseFloat(document.getElementById('jf-vol').value)||0;
+  if(!entry||!vol){toast('\u26a0 Entry price and units required');return;}
+  var dir=document.getElementById('jf-dir').value;
+  var pnl=exit>0?(dir==='LONG'?(exit-entry)*vol:(entry-exit)*vol):0;
+  var risk=Math.abs(entry-sl);
+  var reward=exit>0?Math.abs(exit-entry):0;
+  var rr=risk>0?(reward/risk).toFixed(2):'—';
+  var yesCount=Object.values(jRules).filter(function(r){return r==='yes';}).length;
+  var sysLabel=yesCount===4?'System':yesCount>=2?'Partial':'Broken';
+  var answered=Object.values(jRules).filter(function(r){return r!==null;}).length;
+  var trade={
+    id:Date.now(),
+    date:document.getElementById('jf-date').value,
+    sector:document.getElementById('jf-sector').value,
+    dir:dir,
+    entry:entry,
+    exit:exit||0,
+    sl:sl||0,
+    vol:vol,
+    pnl:pnl,
+    rr:rr,
+    system:answered===4?sysLabel:'—',
+    status:document.getElementById('jf-status').value,
+    notes:document.getElementById('jf-notes').value,
+    rules:{1:jRules[1],2:jRules[2],3:jRules[3],4:jRules[4]}
+  };
+  trades.push(trade);
+  saveJournal();
+  renderJournal();
+  resetTradeForm();
+  toast('\u2713 Trade added to journal');
+}
+
+function resetTradeForm(){
+  ['jf-entry','jf-exit','jf-sl','jf-vol','jf-notes'].forEach(function(id){
+    document.getElementById(id).value='';
+  });
+  jRules={1:null,2:null,3:null,4:null};
+  [1,2,3,4].forEach(function(n){
+    document.getElementById('jrb-'+n+'y').className='jnl-rule-btn';
+    document.getElementById('jrb-'+n+'n').className='jnl-rule-btn';
+    document.getElementById('jr-'+n).className='jnl-rule';
+  });
+  var v=document.getElementById('jnl-verdict');
+  v.textContent='\u9672 Answer all 4 rules to get system verdict';
+  v.className='jnl-verdict partial';
+  setTodayDate();
+}
+
+function deleteTrade(id){
+  trades=trades.filter(function(t){return t.id!==id;});
+  saveJournal();
+  renderJournal();
+  toast('Trade removed');
+}
+
+function saveJournal(){
+  try{localStorage.setItem('twv_journal',JSON.stringify(trades));}catch(e){}
+}
+
+function loadJournal(){
+  try{
+    var s=localStorage.getItem('twv_journal');
+    if(s)trades=JSON.parse(s);
+  }catch(e){}
+  renderJournal();
+}
+
+function renderJournal(){
+  var tbody=document.getElementById('jnl-tbody');
+  if(!tbody)return;
+  if(trades.length===0){
+    tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--muted);font-family:var(--mono);font-size:10px;padding:24px;">No trades yet — add your first trade above</td></tr>';
+    updateJournalStats();
+    return;
+  }
+  var sorted=trades.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var html='';
+  sorted.forEach(function(t,i){
+    var pnlCls=t.pnl>0?'pnl-pos':t.pnl<0?'pnl-neg':'';
+    var dirCls=t.dir==='LONG'?'trade-long':'trade-short';
+    var sysCls=t.system==='System'?'sys-yes':t.system==='Partial'?'sys-partial':'sys-no';
+    var statusColor=t.status==='open'?'var(--neutral)':t.status==='closed'?'var(--bull)':'var(--bear)';
+    html+='<tr>'
+      +'<td style="color:var(--muted);">'+(i+1)+'</td>'
+      +'<td>'+t.date+'</td>'
+      +'<td style="color:#fff;">'+t.sector+'</td>'
+      +'<td class="'+dirCls+'"><b>'+t.dir+'</b></td>'
+      +'<td>'+fmt(t.entry)+'</td>'
+      +'<td>'+(t.exit?fmt(t.exit):'—')+'</td>'
+      +'<td style="color:var(--bear);">'+(t.sl?fmt(t.sl):'—')+'</td>'
+      +'<td>'+t.vol.toLocaleString()+'</td>'
+      +'<td class="'+pnlCls+'">'+(t.exit?(t.pnl>=0?'+':'')+fmt(t.pnl):'open')+'</td>'
+      +'<td style="color:var(--q);">'+t.rr+'</td>'
+      +'<td><span class="sys-badge '+sysCls+'">'+t.system+'</span></td>'
+      +'<td style="color:'+statusColor+';font-size:9px;">'+t.status.toUpperCase()+'</td>'
+      +'<td><button class="btn-del-trade" onclick="deleteTrade('+t.id+')">&#10005;</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html;
+  updateJournalStats();
+}
+
+function updateJournalStats(){
+  var total=trades.length;
+  var closed=trades.filter(function(t){return t.status==='closed'&&t.exit>0;});
+  var wins=closed.filter(function(t){return t.pnl>0;}).length;
+  var winRate=closed.length>0?Math.round((wins/closed.length)*100):0;
+  var totalPnl=closed.reduce(function(a,t){return a+t.pnl;},0);
+  var sysTrades=trades.filter(function(t){return t.system==='System';}).length;
+  var sysPct=total>0?Math.round((sysTrades/total)*100):0;
+  var rrVals=closed.filter(function(t){return t.rr!=='—';}).map(function(t){return parseFloat(t.rr)||0;});
+  var avgRR=rrVals.length>0?(rrVals.reduce(function(a,b){return a+b;},0)/rrVals.length).toFixed(2):0;
+
+  document.getElementById('js-total').textContent=total;
+  var wrEl=document.getElementById('js-winrate');
+  wrEl.textContent=winRate+'%';
+  wrEl.className='jnl-stat-val '+(winRate>=60?'bull':winRate>=40?'neut':'bear');
+  var pnlEl=document.getElementById('js-pnl');
+  pnlEl.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl);
+  pnlEl.className='jnl-stat-val '+(totalPnl>=0?'bull':'bear');
+  document.getElementById('js-systrades').textContent=sysPct+'%';
+  document.getElementById('js-rr').textContent=avgRR;
+}
+
+function clearJournal(){
+  if(!confirm('Clear ALL trades? This cannot be undone.'))return;
+  trades=[];
+  saveJournal();
+  renderJournal();
+  toast('Journal cleared');
+}
+
+function exportJournalCSV(){
+  if(!trades.length){toast('No trades to export');return;}
+  var rows=[['TRADE WITH VIBES — Trading Journal Export'],
+    ['Date','Sector','Direction','Entry','Exit','SL','Units','P&L','R:R','System','Status','Notes',
+     'Rule1:Pivot','Rule2:DPO','Rule3:Volume','Rule4:QML']];
+  trades.forEach(function(t){
+    rows.push([t.date,t.sector,t.dir,t.entry,t.exit||'',t.sl||'',t.vol,
+      t.exit?t.pnl.toFixed(2):'open',t.rr,t.system,t.status,t.notes,
+      t.rules[1]||'—',t.rules[2]||'—',t.rules[3]||'—',t.rules[4]||'—']);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='TWV_Journal_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast('\u2713 Journal CSV exported');
+}
+
+function exportJournalXLSX(){
+  if(typeof XLSX==='undefined'){toast('SheetJS not loaded — open in browser');return;}
+  var wb=XLSX.utils.book_new();
+  var data=[['Date','Sector','Dir','Entry','Exit','SL','Units','P&L','R:R','System','Status','Notes',
+    'R1:Pivot','R2:DPO','R3:Volume','R4:QML']];
+  trades.forEach(function(t){
+    data.push([t.date,t.sector,t.dir,t.entry,t.exit||0,t.sl||0,t.vol,
+      t.exit?parseFloat(t.pnl.toFixed(2)):0,t.rr,t.system,t.status,t.notes,
+      t.rules[1]||'—',t.rules[2]||'—',t.rules[3]||'—',t.rules[4]||'—']);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:12},{wch:14},{wch:6},{wch:10},{wch:10},{wch:10},{wch:8},
+    {wch:10},{wch:6},{wch:10},{wch:10},{wch:30},{wch:8},{wch:8},{wch:8},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'Trade Journal');
+  // Stats sheet
+  var closed=trades.filter(function(t){return t.status==='closed'&&t.exit>0;});
+  var wins=closed.filter(function(t){return t.pnl>0;}).length;
+  var totalPnl=closed.reduce(function(a,t){return a+t.pnl;},0);
+  var stats=[['PERFORMANCE SUMMARY'],
+    ['Total Trades',trades.length],
+    ['Closed Trades',closed.length],
+    ['Wins',wins],
+    ['Win Rate',closed.length>0?((wins/closed.length)*100).toFixed(1)+'%':'0%'],
+    ['Total P&L','Rs '+totalPnl.toFixed(2)],
+    ['System Trades',trades.filter(function(t){return t.system==='System';}).length],
+    ['Generated',new Date().toLocaleString()],
+    ['',''],
+    ['tradewibes.blogspot.com | qml-v2.tiiny.site','']];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(stats),'Performance');
+  XLSX.writeFile(wb,'TWV_Journal_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('\u2713 Journal Excel exported');
+}
+
+// ── WEEKLY CHECKLIST ──
+var wkState={items:{},notes:'',week:''};
+
+function loadWkState(){
+  try{
+    var s=localStorage.getItem('twv_weekly');
+    if(s){wkState=JSON.parse(s);}
+  }catch(e){}
+  for(var i=1;i<=12;i++){
+    var done=wkState.items[i]||false;
+    var item=document.getElementById('wi-'+i);
+    var chk=document.getElementById('wc-'+i);
+    if(item&&chk){
+      item.classList.toggle('done',done);
+      chk.innerHTML=done?'&#10003;':'';
+    }
+  }
+  if(document.getElementById('wk-notes'))
+    document.getElementById('wk-notes').value=wkState.notes||'';
+  if(document.getElementById('wk-week'))
+    document.getElementById('wk-week').value=wkState.week||'';
+  updateWkProgress();
+}
+
+function saveWkState(){
+  wkState.notes=document.getElementById('wk-notes')?document.getElementById('wk-notes').value:'';
+  wkState.week=document.getElementById('wk-week')?document.getElementById('wk-week').value:'';
+  try{localStorage.setItem('twv_weekly',JSON.stringify(wkState));}catch(e){}
+}
+
+function saveWkNotes(){saveWkState();}
+
+function toggleWk(n){
+  wkState.items[n]=!wkState.items[n];
+  var done=wkState.items[n];
+  var item=document.getElementById('wi-'+n);
+  var chk=document.getElementById('wc-'+n);
+  if(item)item.classList.toggle('done',done);
+  if(chk)chk.innerHTML=done?'&#10003;':'';
+  saveWkState();
+  updateWkProgress();
+  toast(done?'&#10003; Task done':'Task unchecked');
+}
+
+function updateWkProgress(){
+  var total=12;
+  var done=Object.values(wkState.items).filter(Boolean).length;
+  var pct=Math.round((done/total)*100);
+  var pctEl=document.getElementById('wk-pct');
+  var barEl=document.getElementById('wk-bar');
+  var statusEl=document.getElementById('wk-status');
+  if(!pctEl)return;
+  pctEl.textContent=pct+'%';
+  barEl.style.width=pct+'%';
+  if(pct===100){
+    pctEl.style.color='var(--bull)';
+    barEl.style.background='var(--bull)';
+    statusEl.textContent='All done \u2014 ready to publish! \u2705';
+    statusEl.style.color='var(--bull)';
+  } else if(pct>=50){
+    pctEl.style.color='var(--m)';
+    barEl.style.background='var(--m)';
+    statusEl.textContent=done+' of '+total+' tasks completed \u2014 keep going';
+    statusEl.style.color='var(--m)';
+  } else {
+    pctEl.style.color='var(--neutral)';
+    barEl.style.background='var(--neutral)';
+    statusEl.textContent=done+' of '+total+' tasks completed';
+    statusEl.style.color='var(--muted)';
+  }
+}
+
+function resetChecklist(){
+  wkState.items={};
+  saveWkState();
+  loadWkState();
+  toast('Checklist reset for new week');
+}
+
+function exportWeekly(){
+  var done=Object.values(wkState.items).filter(Boolean).length;
+  var tasks=[
+    'Weekly OHLC entered','Weekly pivot calculated','DPO 21 updated',
+    'Weekly volume noted','QML levels reviewed','Signal Engine calculated',
+    'First candle pivot bias noted','Volume dry/spike confirmed',
+    'HydroPower sector checked','Dashboard exported',
+    'Tiiny.host updated','Video/post published'
+  ];
+  var lines=['TRADE WITH VIBES — WEEKLY UPDATE SUMMARY'];
+  lines.push('Week: '+(wkState.week||'—'));
+  lines.push('Completed: '+done+'/12 tasks');
+  lines.push('Scrip: '+state.ticker+' | Close: '+fmt(state.close));
+  lines.push('');
+  lines.push('CHECKLIST:');
+  tasks.forEach(function(t,i){
+    lines.push((wkState.items[i+1]?'[x] ':'[ ] ')+t);
+  });
+  if(wkState.notes){lines.push('');lines.push('NOTES:');lines.push(wkState.notes);}
+  lines.push('');lines.push('tradewibes.blogspot.com | qml-v2.tiiny.site');
+  var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='TWV_Weekly_'+(wkState.week||state.date)+'.txt';
+  a.click();
+  toast('Weekly summary exported');
+}
+
+function setLayer(n,pass,warn,label){
+  var dot=document.getElementById('dot-'+n);
+  var chk=document.getElementById('chk-'+n);
+  var cls=pass?'pass':warn?'warn':'fail';
+  dot.className='check-dot '+cls;
+  chk.className='check-val '+cls;
+  chk.textContent=label;
+}
+
+function calcSignal(){
+  var close=parseFloat(document.getElementById('se-close').value)||0;
+  var pivot=parseFloat(document.getElementById('se-pivot').value)||0;
+  var rsi=parseFloat(document.getElementById('se-rsi').value)||50;
+  var dpo=parseFloat(document.getElementById('se-dpo').value)||0;
+  var dpoDir=document.getElementById('se-dpo-dir').value;
+  var volPos=document.getElementById('se-vol-pos').value;
+  var volStreak=parseInt(document.getElementById('se-vol-streak').value)||0;
+  var qmlPos=document.getElementById('se-qml-pos').value;
+
+  var score=0;
+  var bullCount=0;
+  var bearCount=0;
+
+  // LAYER 1: PRICE / PIVOT
+  var l1pass=false,l1warn=false,l1label='';
+  if(close>0&&pivot>0){
+    if(close>pivot){
+      l1pass=true; l1label='Above Pivot \u2014 Bullish \u25b2'; bullCount++;
+    } else if(close<pivot&&rsi<50){
+      l1pass=false; l1label='Below Pivot + RSI<50 \u2014 Downtrend \u25bc'; bearCount++;
+    } else {
+      l1warn=true; l1label='Below Pivot, RSI neutral \u2014 Wait';
+    }
+  } else { l1warn=true; l1label='Enter close and pivot'; }
+  if(l1pass) score++;
+  setLayer(1,l1pass,l1warn,l1label);
+
+  // LAYER 2: DPO
+  var l2pass=false,l2warn=false,l2label='';
+  if(dpo>0&&dpoDir==='rising'){
+    l2pass=true; l2label='DPO+Rising \u2014 Cycle Strong \u25b2'; bullCount++;
+  } else if(dpo>0&&dpoDir==='flat'){
+    l2warn=true; l2label='DPO+ Flat \u2014 Weakening, watch';
+  } else if(dpo<0){
+    l2pass=false; l2label='DPO Below Zero \u2014 Cycle Weak \u25bc'; bearCount++;
+  } else if(dpo>0&&dpoDir==='falling'){
+    l2warn=true; l2label='DPO+ Falling \u2014 Losing steam';
+  } else {
+    l2warn=true; l2label='Enter DPO value';
+  }
+  if(l2pass) score++;
+  setLayer(2,l2pass,l2warn,l2label);
+
+  // LAYER 3: VOLUME
+  var l3pass=false,l3warn=false,l3label='';
+  if(volPos==='support'&&volStreak>=3){
+    l3pass=true; l3label='Accumulation + Streak \u2014 Strong \u25b2'; bullCount++;
+  } else if(volPos==='support'&&volStreak>=1){
+    l3pass=true; l3label='7M+ at Support \u2014 Accumulation \u25b2'; bullCount++;
+  } else if(volPos==='top'){
+    l3pass=false; l3label='7B+ at Top \u2014 Distribution \u25bc'; bearCount++;
+  } else if(volPos==='support'&&volStreak===0){
+    l3warn=true; l3label='Volume Dry at Support \u2014 Watch';
+  } else if(volStreak>=5){
+    l3pass=true; l3label='5-Candle Streak \u2014 Breakout! \u25b2'; bullCount++;
+  } else {
+    l3warn=true; l3label='Mid range volume \u2014 No signal';
+  }
+  if(l3pass) score++;
+  setLayer(3,l3pass,l3warn,l3label);
+
+  // LAYER 4: QML
+  var l4pass=false,l4warn=false,l4label='';
+  if(qmlPos==='above-all'||qmlPos==='above-m'){
+    l4pass=true; l4label='Above M level \u2014 Structure Bullish \u25b2'; bullCount++;
+  } else if(qmlPos==='at-support'){
+    l4pass=true; l4label='At Q/M Support \u2014 Reversal Zone \u25b2'; bullCount++;
+  } else if(qmlPos==='above-l'){
+    l4warn=true; l4label='Above L only \u2014 Needs M break';
+  } else if(qmlPos==='below-all'){
+    l4pass=false; l4label='Below All Levels \u2014 Bearish \u25bc'; bearCount++;
+  } else {
+    l4warn=true; l4label='Select QML position';
+  }
+  if(l4pass) score++;
+  setLayer(4,l4pass,l4warn,l4label);
+
+  // FINAL SIGNAL
+  var main=document.getElementById('se-main');
+  var sub=document.getElementById('se-sub');
+  var scoreEl=document.getElementById('se-score');
+  var confFill=document.getElementById('se-conf-fill');
+  var confLabel=document.getElementById('se-conf-label');
+  var confPct=Math.round((score/4)*100);
+
+  scoreEl.textContent=score+' / 4 layers confirmed';
+  confFill.style.width=confPct+'%';
+  confLabel.textContent='Confidence: '+confPct+'%';
+
+  if(score===4&&bullCount>=3){
+    main.textContent='LONG'; main.className='sig-main long';
+    sub.textContent='All 4 layers confirmed bullish \u2014 High conviction entry';
+    confFill.style.background='var(--bull)';
+    scoreEl.style.color='var(--bull)';
+  } else if(bearCount>=3){
+    main.textContent='SHORT'; main.className='sig-main short';
+    sub.textContent='Bearish across multiple layers \u2014 Avoid long, consider short';
+    confFill.style.background='var(--bear)';
+    scoreEl.style.color='var(--bear)';
+  } else if(score>=3&&bullCount>=2){
+    main.textContent='LONG'; main.className='sig-main long';
+    sub.textContent='3 layers confirmed \u2014 Good setup, manage size';
+    confFill.style.background='var(--bull)';
+    scoreEl.style.color='var(--bull)';
+  } else if(score<=1||bearCount>=2){
+    main.textContent='WAIT'; main.className='sig-main wait';
+    sub.textContent='Conflicting signals \u2014 Retest phase, stay patient';
+    confFill.style.background='var(--neutral)';
+    scoreEl.style.color='var(--neutral)';
+  } else {
+    main.textContent='WAIT'; main.className='sig-main wait';
+    sub.textContent='Not enough confirmation yet \u2014 Watch for alignment';
+    confFill.style.background='var(--neutral)';
+    scoreEl.style.color='var(--neutral)';
+  }
+  toast('\u2713 Signal calculated \u2014 '+main.textContent);
+}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function fmt(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(a,b){return (((a-b)/b)*100).toFixed(2);}
+function fmtDate(d){var dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+
+function applyEdits(){
+  state.ticker=document.getElementById('e-ticker').value;
+  state.date=document.getElementById('e-date').value;
+  state.open=parseFloat(document.getElementById('e-open').value)||0;
+  state.high=parseFloat(document.getElementById('e-high').value)||0;
+  state.low=parseFloat(document.getElementById('e-low').value)||0;
+  state.close=parseFloat(document.getElementById('e-close').value)||0;
+  state.vol=document.getElementById('e-vol').value;
+  state.chg=document.getElementById('e-chg').value;
+  state.rsi=parseFloat(document.getElementById('e-rsi').value)||0;
+  state.wma=parseFloat(document.getElementById('e-wma').value)||0;
+  state.dpo=parseFloat(document.getElementById('e-dpo').value)||0;
+  state.seb=parseFloat(document.getElementById('e-seb').value)||0;
+  state.dc89=parseFloat(document.getElementById('e-dc89').value)||0;
+  state.ichimoku=document.getElementById('e-ich').value;
+  state.w52h=parseFloat(document.getElementById('e-52wh').value)||0;
+  state.w52l=parseFloat(document.getElementById('e-52wl').value)||0;
+  state.entryLo=parseFloat(document.getElementById('e-entry-lo').value)||0;
+  state.entryHi=parseFloat(document.getElementById('e-entry-hi').value)||0;
+  state.sl=parseFloat(document.getElementById('e-sl').value)||0;
+  state.t1lo=parseFloat(document.getElementById('e-t1lo').value)||0;
+  state.t1hi=parseFloat(document.getElementById('e-t1hi').value)||0;
+  state.t2lo=parseFloat(document.getElementById('e-t2lo').value)||0;
+  state.t2hi=parseFloat(document.getElementById('e-t2hi').value)||0;
+  state.scenB=parseFloat(document.getElementById('e-scenb').value)||0;
+  state.sigQ=document.getElementById('e-sig-q').value;
+  state.sigM=document.getElementById('e-sig-m').value;
+  state.sigL=document.getElementById('e-sig-l').value;
+  state.sigSEB=document.getElementById('e-sig-seb').value;
+  state.sigDC=document.getElementById('e-sig-dc').value;
+  collectLevelEdits();
+  renderDashboard();
+  switchTab('dashboard');
+  toast('Dashboard updated');
+}
+
+function renderDashboard(){
+  var c=state.close;
+  document.getElementById('hdr-price').textContent=state.ticker+' '+fmt(c);
+  var hc=document.getElementById('hdr-chg');
+  hc.textContent=(state.chg.startsWith('-')?'\u25bc':'\u25b2')+' '+state.chg+' \u00b7 Vol '+state.vol+' \u00b7 '+fmtDate(state.date);
+  hc.className='header-chg '+(state.chg.startsWith('-')?'bear':'bull');
+  document.getElementById('d-open').textContent=fmt(state.open);
+  document.getElementById('d-high').textContent=fmt(state.high);
+  document.getElementById('d-low').textContent=fmt(state.low);
+  document.getElementById('d-close').textContent=fmt(c);
+  document.getElementById('d-vol').textContent=state.vol;
+  document.getElementById('d-date').textContent=fmtDate(state.date);
+  document.getElementById('badge-date').textContent=state.ticker+' \u00b7 DAILY \u00b7 '+fmtDate(state.date);
+  // indicators
+  var r=state.rsi,w=state.wma,d=state.dpo,s=state.seb;
+  sInd('i-rsi','i-rsi-sig','i-rsi-bar',r.toFixed(2),r>60?'Overbought':r<40?'Oversold':'Neutral',r>60?'bull':r<40?'bear':'neut',r,100,r>50?'var(--bull)':'var(--neutral)');
+  sInd('i-wma','i-wma-sig','i-wma-bar',w.toFixed(2),r>w?'RSI > WMA \u25b2':'RSI < WMA \u25bc',r>w?'bull':'bear',w,100,r>w?'var(--bull)':'var(--bear)');
+  sInd('i-dpo','i-dpo-sig','i-dpo-bar',d.toFixed(2),d>0?'Cycle Up':'Cycle Down',d>0?'bull':'bear',Math.min(Math.abs(d)*1.5,100),100,d>0?'var(--m)':'var(--bear)');
+  sInd('i-seb','i-seb-sig','i-seb-bar',fmt(s),c>s?'Above Band':'Below Band',c>s?'bull':'bear',c>s?70:30,100,c>s?'var(--bull)':'var(--bear)');
+  var vn=parseFloat(state.vol.replace('B',''))||0;
+  sInd('i-nvol','i-nvol-sig','i-nvol-bar',state.vol,vn<0?'Distribution':'Accumulation',vn<0?'bear':'bull',vn<0?20:75,100,vn<0?'var(--bear)':'var(--bull)');
+  // signals
+  document.getElementById('sig-q').textContent=state.sigQ;
+  document.getElementById('sig-m').textContent=state.sigM;
+  document.getElementById('sig-l').textContent=state.sigL;
+  document.getElementById('sig-seb').textContent=state.sigSEB;
+  document.getElementById('sig-dc').textContent=state.sigDC;
+  document.getElementById('sig-ich').textContent=state.ichimoku==='below'?'Below cloud \u00b7 Bearish':state.ichimoku==='above'?'Above cloud \u00b7 Bullish':'Inside cloud \u00b7 Neutral';
+  document.getElementById('sig-vol').textContent=state.vol+' \u00b7 '+(vn<0?'Distribution':'Accumulation');
+  renderBias();renderQMLTable();renderPriceMap();
+  document.getElementById('tp-ticker').textContent=state.ticker;
+  document.getElementById('tp-date').textContent=fmtDate(state.date);
+  document.getElementById('tp-entry').textContent=fmt(state.entryLo)+'\u2013'+fmt(state.entryHi);
+  document.getElementById('tp-sl').textContent=fmt(state.sl);
+  document.getElementById('tp-t1').textContent=fmt(state.t1lo)+'\u2013'+fmt(state.t1hi);
+  document.getElementById('tp-t2').textContent=fmt(state.t2lo)+'\u2013'+fmt(state.t2hi);
+  document.getElementById('tp-b').textContent='Below '+fmt(state.entryLo);
+  var em=(state.entryLo+state.entryHi)/2,risk=em-state.sl,rew=state.t1lo-em,rr=risk>0?(rew/risk).toFixed(1):'--';
+  document.getElementById('rr-badge').textContent='R:R \u2248 1:'+rr+' \u00b7 Entry '+fmt(em)+' \u2192 SL '+fmt(state.sl)+' \u2192 T1 '+fmt(state.t1lo);
+}
+
+function sInd(vid,vsig,vbar,val,sig,cls,fill,max,color){
+  document.getElementById(vid).textContent=val;
+  var s=document.getElementById(vsig);s.textContent=sig;s.className='ind-sig sig-'+cls;
+  var b=document.getElementById(vbar);b.style.width=Math.min(Math.max(fill/max*100,2),100)+'%';b.style.background=color;
+}
+
+function renderBias(){
+  var c=state.close;
+  var qMin=levels.filter(function(l){return l.tier==='Q';}).reduce(function(a,b){return Math.min(a,b.price);},Infinity);
+  var mMin=levels.filter(function(l){return l.tier==='M'&&l.type==='Res';}).reduce(function(a,b){return Math.min(a,b.price);},Infinity);
+  var lRes=levels.filter(function(l){return l.tier==='L'&&l.type==='Res';});
+  var lBull=lRes.length>0&&c>=lRes[0].price;
+  var vn=parseFloat(state.vol.replace('B',''))||0;
+  var bd=[
+    {lbl:'Q',col:'var(--q)',bull:c>qMin,pct:c>qMin?62:30},
+    {lbl:'M',col:'var(--m)',bull:c>mMin,pct:c>mMin?62:30},
+    {lbl:'L',col:'var(--l)',bull:lBull,pct:lBull?55:45},
+    {lbl:'RSI',col:'var(--muted)',bull:state.rsi>50,pct:state.rsi},
+    {lbl:'DPO',col:'var(--muted)',bull:state.dpo>0,pct:state.dpo>0?60:40},
+    {lbl:'VOL',col:'var(--muted)',bull:vn>0,pct:vn>0?65:28},
+  ];
+  var html='';
+  bd.forEach(function(b){
+    var col=b.bull?'var(--bull)':'var(--bear)';
+    var fw=Math.abs(50-b.pct);
+    var fl=b.bull?'50%':b.pct+'%';
+    html+='<div class="bias-row"><div class="bias-tier" style="color:'+b.col+'">'+b.lbl+'</div>'
+      +'<div class="bias-bg"><div class="bias-center"></div>'
+      +'<div class="bias-fill" style="width:'+fw+'%;left:'+fl+';background:'+col+';"></div></div>'
+      +'<div class="bias-lbl" style="color:'+col+'">'+(b.bull?'BULL \u25b2':'BEAR \u25bc')+'</div></div>';
+  });
+  document.getElementById('bias-rows').innerHTML=html;
+  var bears=bd.filter(function(b){return !b.bull;}).length;
+  var o=document.getElementById('overall-bias');
+  if(bears>=4){o.textContent='BEARISH \u2014 WATCH M-Q SUPPORT';o.style.color='var(--bear)';}
+  else if(bears<=2){o.textContent='BULLISH \u2014 BREAKOUT WATCH';o.style.color='var(--bull)';}
+  else{o.textContent='MIXED \u2014 WAIT FOR CONFIRMATION';o.style.color='var(--neutral)';}
+}
+
+function renderQMLTable(){
+  var c=state.close;
+  var sorted=levels.slice().sort(function(a,b){return b.price-a.price;});
+  var html='',done=false;
+  sorted.forEach(function(lv){
+    if(!done&&lv.price<c){
+      html+='<tr class="cur-row"><td colspan="2" style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;">\u25b6 CLOSE</td>'
+        +'<td style="font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;">'+fmt(c)+'</td>'
+        +'<td colspan="3" style="font-family:var(--mono);font-size:9px;color:var(--muted);">'+state.chg+' \u00b7 '+state.ticker+'</td></tr>';
+      done=true;
+    }
+    var d=pct(lv.price,c),dc=lv.price>c?'above':'below',tc='tier-'+lv.tier.toLowerCase();
+    html+='<tr><td class="'+tc+'">'+lv.tier+'</td>'
+      +'<td style="color:var(--muted);font-size:9px;">'+lv.type+'</td>'
+      +'<td style="color:#fff;font-size:12px;">'+fmt(lv.price)+'</td>'
+      +'<td class="'+dc+'">'+d+'%</td>'
+      +'<td><span class="conf-badge '+lv.confClass+'">'+lv.conf+'</span></td>'
+      +'<td style="font-size:9px;color:var(--muted);">'+lv.note+'</td></tr>';
+  });
+  if(!done)html+='<tr class="cur-row"><td colspan="2" style="font-family:var(--mono);font-size:9px;color:var(--muted);">\u25b6 CLOSE</td><td style="font-size:13px;font-weight:700;color:#fff;">'+fmt(c)+'</td><td colspan="3" style="font-size:9px;color:var(--muted);">'+state.chg+'</td></tr>';
+  document.getElementById('qml-tbody').innerHTML=html;
+}
+
+function renderPriceMap(){
+  var all=levels.map(function(l){return l.price;}).concat([state.close]);
+  var rMin=Math.min.apply(null,all)*0.97,rMax=Math.max.apply(null,all)*1.02,span=rMax-rMin;
+  document.getElementById('pmap-range').textContent='Range: '+fmt(rMin)+' \u2013 '+fmt(rMax);
+  function tp(p){return ((rMax-p)/span*100).toFixed(2)+'%';}
+  var html='';
+  // Q zone
+  var qp=levels.filter(function(l){return l.tier==='Q';}).map(function(l){return l.price;});
+  if(qp.length>=2){var qx=Math.max.apply(null,qp),qn=Math.min.apply(null,qp);html+='<div class="czone" style="top:'+((rMax-qx)/span*100).toFixed(2)+'%;height:'+((qx-qn)/span*100).toFixed(2)+'%;background:rgba(124,106,240,0.1);border:1px dashed rgba(124,106,240,0.25);"></div>';}
+  var mp=levels.filter(function(l){return l.tier==='M';}).map(function(l){return l.price;});
+  if(mp.length>=2){var mx=Math.max.apply(null,mp),mn=Math.min.apply(null,mp);html+='<div class="czone" style="top:'+((rMax-mx)/span*100).toFixed(2)+'%;height:'+((mx-mn)/span*100).toFixed(2)+'%;background:rgba(26,184,122,0.08);border:1px dashed rgba(26,184,122,0.2);"></div>';}
+  var lp=levels.filter(function(l){return l.tier==='L';}).map(function(l){return l.price;});
+  if(lp.length>=2){var lx=Math.max.apply(null,lp),ln=Math.min.apply(null,lp);html+='<div class="czone" style="top:'+((rMax-lx)/span*100).toFixed(2)+'%;height:'+Math.max((lx-ln)/span*100,1.5).toFixed(2)+'%;background:rgba(232,160,48,0.1);border:1px dashed rgba(232,160,48,0.25);"></div>';}
+  var s=levels.slice().sort(function(a,b){return b.price-a.price;});
+  s.forEach(function(lv){
+    var col=lv.tier==='Q'?'var(--q)':lv.tier==='M'?'var(--m)':'var(--l)';
+    var op=lv.tier==='Q'?0.7:lv.tier==='M'?0.55:0.5;
+    html+='<div class="bar-level" style="top:'+tp(lv.price)+'">'
+      +'<div class="bar-tag" style="color:'+col+';font-size:8px;">'+lv.tier+'\u00b7'+lv.type.charAt(0)+'</div>'
+      +'<div class="bar-line" style="background:'+col+';opacity:'+op+';"></div>'
+      +'<div class="bar-price" style="color:'+col+';">'+fmt(lv.price)+'</div></div>';
+  });
+  var ct=((rMax-state.close)/span*100).toFixed(2);
+  html+='<div class="cur-marker" style="top:'+ct+'%;"></div>'
+    +'<div class="cur-tag" style="top:'+ct+'%;">'+fmt(state.close)+'</div>';
+  document.getElementById('pricebar').innerHTML=html;
+}
+
+function renderLevelEditor(){
+  var html='';
+  levels.forEach(function(lv,i){
+    html+='<tr id="lvrow-'+i+'">'
+      +'<td style="color:var(--muted);font-family:var(--mono);font-size:9px;padding:4px 8px;">'+(i+1)+'</td>'
+      +'<td><select class="lv-tier" data-i="'+i+'" style="width:52px;"><option'+(lv.tier==='Q'?' selected':'')+'>Q</option><option'+(lv.tier==='M'?' selected':'')+'>M</option><option'+(lv.tier==='L'?' selected':'')+'>L</option></select></td>'
+      +'<td><select class="lv-type" data-i="'+i+'" style="width:52px;"><option'+(lv.type==='Res'?' selected':'')+'>Res</option><option'+(lv.type==='Sup'?' selected':'')+'>Sup</option></select></td>'
+      +'<td><input class="lv-price" data-i="'+i+'" type="number" step="0.01" value="'+lv.price+'" style="width:88px;"></td>'
+      +'<td><input class="lv-conf" data-i="'+i+'" value="'+lv.conf+'" style="width:88px;"></td>'
+      +'<td><select class="lv-cls" data-i="'+i+'" style="width:76px;"><option value="conf-hi"'+(lv.confClass==='conf-hi'?' selected':'')+'>Q (Hi)</option><option value="conf-md"'+(lv.confClass==='conf-md'?' selected':'')+'>M (Mid)</option><option value="conf-lo"'+(lv.confClass==='conf-lo'?' selected':'')+'>L (Lo)</option></select></td>'
+      +'<td><input class="lv-note" data-i="'+i+'" value="'+lv.note+'" style="width:180px;"></td>'
+      +'<td><button class="btn-del" onclick="deleteLevel('+i+')">&#10005;</button></td>'
+      +'</tr>';
+  });
+  document.getElementById('lvl-tbody').innerHTML=html;
+}
+
+function collectLevelEdits(){
+  var rows=document.querySelectorAll('[id^="lvrow-"]');
+  if(!rows.length)return;
+  var nl=[];
+  rows.forEach(function(row){
+    var pr=parseFloat(row.querySelector('.lv-price').value)||0;
+    if(pr===0)return;
+    nl.push({tier:row.querySelector('.lv-tier').value,type:row.querySelector('.lv-type').value,price:pr,conf:row.querySelector('.lv-conf').value,confClass:row.querySelector('.lv-cls').value,note:row.querySelector('.lv-note').value});
+  });
+  if(nl.length>0)levels=nl;
+}
+
+function addLevel(){
+  collectLevelEdits();
+  levels.push({tier:'L',type:'Res',price:state.close,conf:'L',confClass:'conf-lo',note:'New level'});
+  renderLevelEditor();
+  toast('+ Level added');
+}
+
+function deleteLevel(i){
+  collectLevelEdits();
+  levels.splice(i,1);
+  renderLevelEditor();
+  toast('Level removed');
+}
+
+function exportCSV(){
+  var rows=[
+    ['NEPSE QML Dashboard Export — Trade With Vibes','','','','',''],
+    ['Ticker',state.ticker,'Date',state.date,'Close',state.close],
+    ['Open',state.open,'High',state.high,'Low',state.low,'Volume',state.vol],
+    ['RSI 14',state.rsi,'WMA 9',state.wma,'DPO 21',state.dpo,'SEB 21',state.seb,'DC-89',state.dc89],
+    ['52W High',state.w52h,'52W Low',state.w52l,'Ichimoku',state.ichimoku],
+    [''],
+    ['TRADE PLAN','','','','',''],
+    ['Entry Low',state.entryLo,'Entry High',state.entryHi,'Stop Loss',state.sl],
+    ['T1 Low',state.t1lo,'T1 High',state.t1hi,'T2 Low',state.t2lo,'T2 High',state.t2hi],
+    [''],
+    ['QML LEVELS','','','','',''],
+    ['Tier','Type','Price','Dist% from Close','Confluence','Note'],
+  ];
+  var s=levels.slice().sort(function(a,b){return b.price-a.price;});
+  s.forEach(function(lv){rows.push([lv.tier,lv.type,lv.price,pct(lv.price,state.close)+'%',lv.conf,lv.note]);});
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='NEPSE_QML_'+state.ticker+'_'+state.date+'.csv';a.click();
+  toast('CSV downloaded');
+}
+
+function exportXLSX(){
+  if(typeof XLSX==='undefined'){toast('SheetJS not loaded — open in browser');return;}
+  var wb=XLSX.utils.book_new();
+  var s1=[['NEPSE QML — Trade With Vibes'],['Ticker',state.ticker,'Date',state.date],['Open',state.open,'High',state.high,'Low',state.low,'Close',state.close,'Vol',state.vol],[],['INDICATORS'],['RSI',state.rsi,'WMA',state.wma,'DPO',state.dpo,'SEB',state.seb,'DC89',state.dc89],['52W H',state.w52h,'52W L',state.w52l,'Ichimoku',state.ichimoku],[],['TRADE PLAN'],['Entry Lo',state.entryLo,'Entry Hi',state.entryHi,'SL',state.sl],['T1 Lo',state.t1lo,'T1 Hi',state.t1hi,'T2 Lo',state.t2lo,'T2 Hi',state.t2hi]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s1),'Summary');
+  var s2=[['Tier','Type','Price','Dist%','Confluence','Class','Note']];
+  var so=levels.slice().sort(function(a,b){return b.price-a.price;});
+  so.forEach(function(lv){s2.push([lv.tier,lv.type,lv.price,parseFloat(pct(lv.price,state.close)),lv.conf,lv.confClass,lv.note]);});
+  var ws2=XLSX.utils.aoa_to_sheet(s2);ws2['!cols']=[{wch:6},{wch:6},{wch:10},{wch:10},{wch:14},{wch:10},{wch:36}];
+  XLSX.utils.book_append_sheet(wb,ws2,'QML Levels');
+  var s3=[['Signal','Value'],['Q Structure',state.sigQ],['M Structure',state.sigM],['L Structure',state.sigL],['Price vs SEB',state.sigSEB],['Price vs DC-89',state.sigDC],['Ichimoku',state.ichimoku],['Net Volume',state.vol]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s3),'Signals');
+  XLSX.writeFile(wb,'NEPSE_QML_'+state.ticker+'_'+state.date+'.xlsx');
+  toast('Excel downloaded');
+}
+
+function exportHTML(){
+  var snap='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>NEPSE QML '+state.ticker+' '+state.date+'</title>'
+    +'<style>body{font-family:monospace;background:#070b12;color:#c8d8e8;padding:20px;}table{border-collapse:collapse;width:100%;margin-bottom:18px;}th,td{border:1px solid rgba(255,255,255,0.1);padding:7px 12px;font-size:11px;}th{background:rgba(255,255,255,0.05);color:#6a7f95;letter-spacing:1px;}h2{color:#7c6af0;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin:14px 0 7px;}h1{color:#fff;font-size:15px;letter-spacing:2px;}small{color:#6a7f95;}.q{color:#7c6af0;}.m{color:#1ab87a;}.l{color:#e8a030;}.bear{color:#e74c3c;}.bull{color:#2ecc71;}'
+    +'</style></head><body>'
+    +'<h1>'+state.ticker+' QML Setup</h1><small>Trade With Vibes &middot; '+fmtDate(state.date)+' &middot; Close: '+fmt(state.close)+'</small>'
+    +'<h2>Market Data</h2><table><tr><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th><th>Change</th></tr>'
+    +'<tr><td>'+fmt(state.open)+'</td><td class="bull">'+fmt(state.high)+'</td><td class="bear">'+fmt(state.low)+'</td><td><b>'+fmt(state.close)+'</b></td><td>'+state.vol+'</td><td>'+(state.chg.startsWith('-')?'<span class="bear">':'<span class="bull">')+state.chg+'</span></td></tr></table>'
+    +'<h2>Indicators</h2><table><tr><th>RSI 14</th><th>WMA 9</th><th>DPO 21</th><th>SEB 21</th><th>DC-89</th><th>52W High</th><th>Ichimoku</th></tr>'
+    +'<tr><td>'+state.rsi+'</td><td>'+state.wma+'</td><td>'+state.dpo+'</td><td>'+fmt(state.seb)+'</td><td>'+fmt(state.dc89)+'</td><td>'+fmt(state.w52h)+'</td><td>'+state.ichimoku+'</td></tr></table>'
+    +'<h2>QML Levels</h2><table><tr><th>Tier</th><th>Type</th><th>Price</th><th>Dist%</th><th>Confluence</th><th>Note</th></tr>';
+  var so=levels.slice().sort(function(a,b){return b.price-a.price;});
+  so.forEach(function(lv){
+    var cl=lv.tier==='Q'?'q':lv.tier==='M'?'m':'l';
+    snap+='<tr><td class="'+cl+'"><b>'+lv.tier+'</b></td><td>'+lv.type+'</td><td><b>'+fmt(lv.price)+'</b></td><td>'+pct(lv.price,state.close)+'%</td><td>'+lv.conf+'</td><td>'+lv.note+'</td></tr>';
+  });
+  snap+='</table><h2>Trade Plan</h2><table><tr><th>Entry</th><th>SL</th><th>T1</th><th>T2</th></tr>'
+    +'<tr><td>'+fmt(state.entryLo)+'\u2013'+fmt(state.entryHi)+'</td><td class="bear">'+fmt(state.sl)+'</td><td class="bull">'+fmt(state.t1lo)+'\u2013'+fmt(state.t1hi)+'</td><td class="q">'+fmt(state.t2lo)+'\u2013'+fmt(state.t2hi)+'</td></tr></table>'
+    +'<small>tradewibes.blogspot.com &middot; Generated: '+new Date().toLocaleString()+'</small></body></html>';
+  var blob=new Blob([snap],{type:'text/html'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='NEPSE_QML_Snapshot_'+state.ticker+'_'+state.date+'.html';a.click();
+  toast('HTML snapshot saved');
+}
+
+var state=JSON.parse(JSON.stringify(presets.NEPSE.state));
+var levels=JSON.parse(JSON.stringify(presets.NEPSE.levels));
+renderDashboard();
+populateEditorFields();
+</script>
+</body>
+</html>
